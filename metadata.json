@@ -1,0 +1,6 @@
+{
+  "name": "NFL Pick'em Analytics & Game Theory Platform",
+  "description": "An advanced NFL pick'em platform featuring live RedZone sweat tracking, ILP game-theoretic confidence optimization, deterministic endgame clinch matrices, AI broadcast commentary, and frictionless identity.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
