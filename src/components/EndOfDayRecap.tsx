@@ -40,7 +40,7 @@ export const EndOfDayRecap: React.FC<EndOfDayRecapProps> = ({
   const completedGames = YAHOO_WEEK_GAMES.filter(g => g.status === 'final');
   const pendingGames = YAHOO_WEEK_GAMES.filter(g => g.status !== 'final');
 
-  // Detailed picker scorecard analytics derived from Yahoo Group #13003
+  // Detailed picker scorecard analytics derived from the Initech Invitational
   const pickersAnalysis = [
     {
       teamId: 'team-orange',

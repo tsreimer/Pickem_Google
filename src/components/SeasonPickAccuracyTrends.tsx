@@ -282,7 +282,7 @@ export const SeasonPickAccuracyTrends: React.FC = () => {
             Historical Pick Accuracy Trends
           </h2>
           <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl">
-            Track week-by-week accuracy progression, confidence point capture rates, and high-anchor hit rates across the current NFL season against Yahoo Group #13003.
+            Track week-by-week accuracy progression, confidence point capture rates, and high-anchor hit rates across the current NFL season against the league.
           </p>
         </div>
 
@@ -710,7 +710,7 @@ export const SeasonPickAccuracyTrends: React.FC = () => {
           </div>
 
           <span className="text-slate-500 text-[11px]">
-            Week 1–7 NFL Regular Season • Yahoo #13003
+            Week 1–7 NFL Regular Season • Initech Invitational
           </span>
         </div>
       </div>

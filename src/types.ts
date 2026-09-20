@@ -215,3 +215,77 @@ export interface BroadcastCommentaryData {
   timestamp: string;
 }
 
+export type LockWindowId = 'thu_evening' | 'sun_morning' | 'sun_afternoon' | 'sun_evening' | 'mon_evening';
+
+export interface YahooLockWindow {
+  id: LockWindowId;
+  name: string;
+  kickoffLabel: string;
+  day: 'Thursday' | 'Sunday' | 'Monday';
+  period: 'Morning' | 'Afternoon' | 'Evening';
+  typicalKickoff: string;
+  status: 'pending' | 'locked' | 'synced';
+  gamesCount: number;
+  gamesList: string[];
+  lockedAt?: string;
+  syncedAt?: string;
+  lastSyncResult?: string;
+  autoSyncTriggered?: boolean;
+}
+
+export interface SyncAuditLogEntry {
+  id: string;
+  timestamp: string;
+  windowId: string;
+  windowName: string;
+  status: 'success' | 'error' | 'in_progress';
+  message: string;
+  gamesLockedCount: number;
+  revealedPicksCount: number;
+  triggerSource: 'auto_daemon' | 'manual_request' | 'kickoff_hook';
+}
+
+export interface TtsSpeakerConfig {
+  speaker: string;
+  voiceName: string;
+  roleContext: string;
+}
+
+export interface TtsDirectorsNotes {
+  style: string;
+  pace: string;
+  accent: string;
+}
+
+export interface TtsAudioProfile {
+  id: string;
+  name: string; // # AUDIO PROFILE: [Name]
+  title: string; // ## "[Title]"
+  sceneTitle: string; // ## THE SCENE: [Scene Title]
+  sceneDescription: string; // [Vivid description of the scene]
+  directorsNotes: TtsDirectorsNotes; // ### DIRECTOR'S NOTES: Style, Pace, Accent
+  sampleContext: string; // ### SAMPLE CONTEXT: [Role/Persona description]
+  transcript: string; // #### TRANSCRIPT: [Script]
+  isMultiSpeaker: boolean;
+  speakerConfigs: TtsSpeakerConfig[];
+  updatedAt?: string;
+  isPreset?: boolean;
+}
+
+export function formatTtsPromptPayload(profile: TtsAudioProfile): string {
+  const parts: string[] = [];
+  parts.push(`# AUDIO PROFILE: ${profile.name}`);
+  parts.push(`## "${profile.title}"\n`);
+  parts.push(`## THE SCENE: ${profile.sceneTitle}`);
+  parts.push(`${profile.sceneDescription}\n`);
+  parts.push(`### DIRECTOR'S NOTES`);
+  parts.push(`Style: ${profile.directorsNotes.style}`);
+  parts.push(`Pace: ${profile.directorsNotes.pace}`);
+  parts.push(`Accent: ${profile.directorsNotes.accent}\n`);
+  parts.push(`### SAMPLE CONTEXT`);
+  parts.push(`${profile.sampleContext}\n`);
+  parts.push(`#### TRANSCRIPT`);
+  parts.push(`${profile.transcript}`);
+  return parts.join("\n");
+}
+

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Team, Game, CommentMessage, PushNotificationItem } from '../types';
+import { Team, Game, CommentMessage, PushNotificationItem, YahooLockWindow, SyncAuditLogEntry } from '../types';
 import { INITIAL_TEAMS, INITIAL_GAMES, INITIAL_COMMENTS, INITIAL_NOTIFICATIONS } from '../data/mockData';
 import { audioPreGenerationService } from '../services/audioPreGenerationService';
 
@@ -33,11 +33,19 @@ interface TeamContextType {
   fetchLiveEspnGames: () => Promise<boolean>;
   isSyncingLive: boolean;
   lastSyncTime: string;
+  // Yahoo Lock Windows & Auto-Sync
+  yahooLockWindows: YahooLockWindow[];
+  autoSyncEnabled: boolean;
+  syncAuditLogs: SyncAuditLogEntry[];
+  fetchYahooLockWindows: () => Promise<void>;
+  syncYahooLockWindow: (windowId?: string) => Promise<boolean>;
+  toggleAutoSync: (enabled?: boolean) => Promise<boolean>;
+  isSyncingLockWindow: boolean;
   // Simulation Controls
   simulateScenario: (scenario: 'kc_wins' | 'buf_scores_td' | 'reset') => void;
   simulationState: 'kc_leads' | 'buf_ahead' | 'final_kc' | 'final_buf';
-  activeTab: 'home' | 'war-room' | 'strategist' | 'watercooler' | 'vault';
-  setActiveTab: (tab: 'home' | 'war-room' | 'strategist' | 'watercooler' | 'vault') => void;
+  activeTab: 'home' | 'war-room' | 'strategist' | 'watercooler' | 'vault' | 'commissioner';
+  setActiveTab: (tab: 'home' | 'war-room' | 'strategist' | 'watercooler' | 'vault' | 'commissioner') => void;
 }
 
 const TeamContext = createContext<TeamContextType | undefined>(undefined);
@@ -55,8 +63,8 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const toggleCommentarySidebar = () => setIsCommentarySidebarOpen(prev => !prev);
   const [isSyncingLive, setIsSyncingLive] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>('Live (Auto-polling)');
-  const yahooLeagueId = '13003';
-  const yahooLeagueUrl = 'https://football.fantasysports.yahoo.com/pickem/13003';
+  const yahooLeagueId = 'initech-invitational';
+  const yahooLeagueUrl = 'https://football.fantasysports.yahoo.com/pickem';
 
   // Fetch real-time live games from ESPN API
   const fetchLiveEspnGames = async (): Promise<boolean> => {
@@ -78,8 +86,156 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsSyncingLive(false);
     }
   };
+
+  // Yahoo Lock Windows & Automated Sync Pipeline
+  const [yahooLockWindows, setYahooLockWindows] = useState<YahooLockWindow[]>([
+    {
+      id: 'thu_evening',
+      name: 'Thursday Evening Lock',
+      kickoffLabel: 'Thu 8:15 PM',
+      day: 'Thursday',
+      period: 'Evening',
+      typicalKickoff: 'Thursday 8:15 PM EDT (TNF)',
+      status: 'synced',
+      gamesCount: 1,
+      gamesList: ['DAL @ NYG (Final: DAL 20 - NYG 15)'],
+      lockedAt: '2026-09-17T20:15:00-04:00',
+      syncedAt: '2026-09-17T20:15:09-04:00',
+      lastSyncResult: 'All 12 Initech Invitational manager picks locked & ingested for TNF',
+      autoSyncTriggered: true,
+    },
+    {
+      id: 'sun_morning',
+      name: 'Sunday Morning Lock',
+      kickoffLabel: 'Sun 1:00 PM',
+      day: 'Sunday',
+      period: 'Morning',
+      typicalKickoff: 'Sunday 1:00 PM EDT (Early Slate)',
+      status: 'synced',
+      gamesCount: 8,
+      gamesList: ['GB @ DET (Final: DET 31 - GB 29)', 'CIN @ BAL (Final: BAL 41 - CIN 38)', 'TEN @ NYJ', 'IND @ CHI', 'CLE @ JAX', 'CAR @ TB', 'MIA @ BUF', 'NO @ ATL'],
+      lockedAt: '2026-09-20T13:00:00-04:00',
+      syncedAt: '2026-09-20T13:00:14-04:00',
+      lastSyncResult: 'Early slate locked. 8 matchups revealed across 12 manager cards in matrix.',
+      autoSyncTriggered: true,
+    },
+    {
+      id: 'sun_afternoon',
+      name: 'Sunday Afternoon Lock',
+      kickoffLabel: 'Sun 4:05 PM / 4:25 PM',
+      day: 'Sunday',
+      period: 'Afternoon',
+      typicalKickoff: 'Sunday 4:25 PM EDT (Late Slate)',
+      status: 'synced',
+      gamesCount: 4,
+      gamesList: ['BUF @ KC (Q4 01:18 • Sweat Game)', 'DEN @ LAC (Final: LAC 23 - DEN 16)', 'LAR @ ARI (Final: LAR 27 - ARI 24)', 'WAS @ PHI (Scheduled)'],
+      lockedAt: '2026-09-20T16:25:00-04:00',
+      syncedAt: '2026-09-20T16:25:08-04:00',
+      lastSyncResult: 'Late afternoon slate locked & synced. Active sweat game BUF @ KC streaming live.',
+      autoSyncTriggered: true,
+    },
+    {
+      id: 'sun_evening',
+      name: 'Sunday Evening Lock',
+      kickoffLabel: 'Sun 8:20 PM',
+      day: 'Sunday',
+      period: 'Evening',
+      typicalKickoff: 'Sunday 8:20 PM EDT (SNF)',
+      status: 'pending',
+      gamesCount: 1,
+      gamesList: ['LV @ MIA (Sun 8:20 PM)'],
+      lastSyncResult: 'Pending kickoff lock at 8:20 PM EDT. Automated sync will trigger immediately upon lock.',
+      autoSyncTriggered: false,
+    },
+    {
+      id: 'mon_evening',
+      name: 'Monday Evening Lock',
+      kickoffLabel: 'Mon 8:15 PM',
+      day: 'Monday',
+      period: 'Evening',
+      typicalKickoff: 'Monday 8:15 PM EDT (MNF)',
+      status: 'pending',
+      gamesCount: 2,
+      gamesList: ['SF @ SEA (Mon 8:15 PM)', 'BAL @ LAC (Mon 8:15 PM)'],
+      lastSyncResult: 'Pending Monday Night Football lock. Automated sync scheduled after kickoff lock.',
+      autoSyncTriggered: false,
+    },
+  ]);
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
+  const [syncAuditLogs, setSyncAuditLogs] = useState<SyncAuditLogEntry[]>([]);
+  const [isSyncingLockWindow, setIsSyncingLockWindow] = useState(false);
+
+  const fetchYahooLockWindows = async () => {
+    try {
+      const res = await fetch('/api/yahoo/lock-windows');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.windows)) {
+          setYahooLockWindows(data.windows);
+          setAutoSyncEnabled(Boolean(data.autoSyncEnabled));
+          if (Array.isArray(data.recentAuditLogs)) {
+            setSyncAuditLogs(data.recentAuditLogs);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch Yahoo lock windows:', e);
+    }
+  };
+
+  const syncYahooLockWindow = async (windowId?: string): Promise<boolean> => {
+    setIsSyncingLockWindow(true);
+    try {
+      const res = await fetch('/api/yahoo/sync-lock-window', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ windowId, triggerAll: !windowId }),
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.allWindows)) {
+        setYahooLockWindows(data.allWindows);
+        await fetchYahooLockWindows();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.warn('Failed to sync Yahoo lock window:', e);
+      return false;
+    } finally {
+      setIsSyncingLockWindow(false);
+    }
+  };
+
+  const toggleAutoSync = async (enabled?: boolean): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/yahoo/auto-sync-toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAutoSyncEnabled(Boolean(data.autoSyncEnabled));
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.warn('Failed to toggle auto sync:', e);
+      return false;
+    }
+  };
+
+  // Poll lock windows on mount and every 60s
+  useEffect(() => {
+    fetchYahooLockWindows();
+    const timer = setInterval(() => {
+      fetchYahooLockWindows();
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
+
   const [simulationState, setSimulationState] = useState<'kc_leads' | 'buf_ahead' | 'final_kc' | 'final_buf'>('kc_leads');
-  const [activeTab, setActiveTab] = useState<'home' | 'war-room' | 'strategist' | 'watercooler' | 'vault'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'war-room' | 'strategist' | 'watercooler' | 'vault' | 'commissioner'>('home');
 
   // Load identity from localStorage
   const [currentTeamId, setCurrentTeamIdState] = useState<string>(() => {
@@ -303,6 +459,13 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
         fetchLiveEspnGames,
         isSyncingLive,
         lastSyncTime,
+        yahooLockWindows,
+        autoSyncEnabled,
+        syncAuditLogs,
+        fetchYahooLockWindows,
+        syncYahooLockWindow,
+        toggleAutoSync,
+        isSyncingLockWindow,
         simulateScenario,
         simulationState,
         activeTab,

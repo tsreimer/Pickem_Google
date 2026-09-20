@@ -27,6 +27,7 @@ import {
   MessageSquare,
   Activity,
   Cpu,
+  RefreshCw,
 } from 'lucide-react';
 
 export const BroadcastCommentarySidebar: React.FC = () => {
@@ -46,10 +47,33 @@ export const BroadcastCommentarySidebar: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
 
-  // Audio Playback with Web SpeechSynthesis
+  // Audio Playback with Gemini Neural TTS & Web SpeechSynthesis Fallback
   const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
+  const [isSynthesizingAudio, setIsSynthesizingAudio] = useState<boolean>(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioEngineType, setAudioEngineType] = useState<'gemini' | 'browser' | null>(null);
+  const [ttsNotice, setTtsNotice] = useState<string | null>(null);
   const [speechRate, setSpeechRate] = useState<number>(1.0);
   const speechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Sync speechRate to audio element
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = speechRate;
+    }
+  }, [speechRate]);
+
+  const stopAllAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    setIsPlayingAudio(false);
+  };
 
   // Fetch or generate commentary for the current parameters
   const generateCommentary = async (customPrompt?: string) => {
@@ -95,17 +119,12 @@ export const BroadcastCommentarySidebar: React.FC = () => {
   // Clean up audio on unmount or close
   useEffect(() => {
     return () => {
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
+      stopAllAudio();
     };
   }, []);
 
   const handleClose = () => {
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-      setIsPlayingAudio(false);
-    }
+    stopAllAudio();
     setIsCommentarySidebarOpen(false);
   };
 
@@ -132,33 +151,18 @@ export const BroadcastCommentarySidebar: React.FC = () => {
     });
   };
 
-  // Speech synthesis playback
-  const toggleSpeechAudio = () => {
+  const playWithBrowserSpeech = (fullText: string) => {
     if (!window.speechSynthesis) return;
-
-    if (isPlayingAudio) {
-      window.speechSynthesis.cancel();
-      setIsPlayingAudio(false);
-      return;
-    }
-
-    if (!commentary || commentary.broadcastScript.length === 0) return;
-
     window.speechSynthesis.cancel();
-
-    // Combine lines into speech text
-    const fullText = commentary.broadcastScript
-      .map((line) => `${line.speaker}: ${line.text}`)
-      .join('. ');
 
     const utterance = new SpeechSynthesisUtterance(fullText);
     utterance.rate = speechRate;
 
-    // Pick voice if available
     const voices = window.speechSynthesis.getVoices();
-    const englishVoice = voices.find(
-      (v) => v.lang.startsWith('en') && (v.name.includes('Male') || v.name.includes('Natural'))
-    ) || voices[0];
+    const englishVoice =
+      voices.find(
+        (v) => v.lang.startsWith('en') && (v.name.includes('Male') || v.name.includes('Natural'))
+      ) || voices[0];
     if (englishVoice) {
       utterance.voice = englishVoice;
     }
@@ -169,6 +173,100 @@ export const BroadcastCommentarySidebar: React.FC = () => {
     speechUtteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
     setIsPlayingAudio(true);
+  };
+
+  // Speech synthesis playback with Gemini 3.1 Flash Neural TTS
+  const toggleSpeechAudio = async (forceGemini: boolean = false) => {
+    if (isPlayingAudio) {
+      stopAllAudio();
+      return;
+    }
+
+    if (!commentary || commentary.broadcastScript.length === 0) return;
+
+    // Build dialogue text
+    const fullText = commentary.broadcastScript
+      .map((line) => `${line.speaker}: ${line.text}`)
+      .join('. ');
+
+    if (!forceGemini && audioUrl && audioRef.current) {
+      try {
+        audioRef.current.playbackRate = speechRate;
+        await audioRef.current.play();
+        setIsPlayingAudio(true);
+        setAudioEngineType('gemini');
+        return;
+      } catch (err) {
+        console.warn('Cached audio playback failed, regenerating:', err);
+      }
+    }
+
+    setIsSynthesizingAudio(true);
+    setTtsNotice(null);
+
+    const isDual = selectedPersona === 'dual';
+    const primaryVoice =
+      selectedPersona === 'sal' ? 'Fenrir' : selectedPersona === 'chloe' ? 'Kore' : 'Puck';
+
+    const speakerConfigs = isDual
+      ? [
+          { speaker: 'Coach Sal', voiceName: 'Fenrir' },
+          { speaker: 'Dr. Chloe', voiceName: 'Kore' },
+          { speaker: 'Sal', voiceName: 'Fenrir' },
+          { speaker: 'Chloe', voiceName: 'Kore' },
+        ]
+      : undefined;
+
+    try {
+      const res = await fetch('/api/tts/synthesize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: fullText,
+          voiceName: primaryVoice,
+          isMultiSpeaker: isDual,
+          speakerVoiceConfigs: speakerConfigs,
+          stylePrompt:
+            'Live sports radio post-game breakdown desk. High energy, authentic broadcast banter, rapid analysis, clear pacing.',
+          characterPersona: 'NFL Pickem Radio Desk Broadcast',
+          force: forceGemini,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.audioUrl && !data.fallbackToSpeechSynthesis) {
+        setAudioUrl(data.audioUrl);
+        setAudioEngineType('gemini');
+        setTtsNotice(null);
+
+        if (audioRef.current) {
+          audioRef.current.src = data.audioUrl;
+          audioRef.current.playbackRate = speechRate;
+          audioRef.current.load();
+          await audioRef.current.play();
+          setIsPlayingAudio(true);
+        }
+        return;
+      }
+
+      // Quota or demand fallback
+      setAudioEngineType('browser');
+      setTtsNotice(
+        data.message ||
+          (data.isHighDemand
+            ? 'Gemini TTS high demand spike. Playing with browser speech engine.'
+            : 'Gemini TTS rate limit active. Playing with browser speech engine.')
+      );
+      playWithBrowserSpeech(fullText);
+    } catch (err) {
+      console.warn('Gemini TTS synthesis failed, using browser speech fallback:', err);
+      setAudioEngineType('browser');
+      setTtsNotice('Network error connecting to Gemini TTS. Playing with browser speech engine.');
+      playWithBrowserSpeech(fullText);
+    } finally {
+      setIsSynthesizingAudio(false);
+    }
   };
 
   const currentAccuracyRecord = getTeamSeasonAccuracy(currentTeam.id);
@@ -484,46 +582,124 @@ export const BroadcastCommentarySidebar: React.FC = () => {
               </div>
             </div>
 
+            {/* Hidden HTML5 Audio Element for Gemini Neural Audio */}
+            <audio
+              ref={audioRef}
+              onEnded={() => setIsPlayingAudio(false)}
+              onError={(e) => {
+                console.warn('Audio element playback error:', e);
+                setIsPlayingAudio(false);
+              }}
+            />
+
             {/* Audio Speech Player Bar */}
-            <div className="rounded-xl p-3 bg-[#131B2A] border border-[#1E293B] flex items-center justify-between gap-3 shadow">
-              <div className="flex items-center gap-2.5">
-                <button
-                  onClick={toggleSpeechAudio}
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold transition shadow ${
-                    isPlayingAudio
-                      ? 'bg-amber-500 text-black animate-pulse'
-                      : 'bg-emerald-500 hover:bg-emerald-400 text-black'
-                  }`}
-                  title={isPlayingAudio ? 'Pause Broadcast Audio' : 'Play Broadcast Audio'}
-                >
-                  {isPlayingAudio ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
-                </button>
-                <div>
-                  <div className="text-xs font-extrabold text-white flex items-center gap-1.5">
-                    <span>{isPlayingAudio ? 'Broadcasting Audio...' : 'Listen to Broadcast'}</span>
-                    {isPlayingAudio && (
-                      <span className="flex items-center gap-0.5 text-amber-400">
-                        <span className="w-1 h-3 bg-amber-400 animate-pulse rounded-full"></span>
-                        <span className="w-1 h-4 bg-amber-400 animate-pulse delay-75 rounded-full"></span>
-                        <span className="w-1 h-2 bg-amber-400 animate-pulse delay-150 rounded-full"></span>
-                      </span>
+            <div className="space-y-2">
+              <div className="rounded-xl p-3 bg-[#131B2A] border border-[#1E293B] flex items-center justify-between gap-3 shadow">
+                <div className="flex items-center gap-2.5">
+                  <button
+                    onClick={() => toggleSpeechAudio(false)}
+                    disabled={isSynthesizingAudio}
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold transition shadow cursor-pointer ${
+                      isPlayingAudio
+                        ? 'bg-amber-500 text-black animate-pulse'
+                        : isSynthesizingAudio
+                        ? 'bg-amber-600 text-white animate-pulse'
+                        : 'bg-emerald-500 hover:bg-emerald-400 text-black'
+                    }`}
+                    title={
+                      isPlayingAudio
+                        ? 'Pause Broadcast Audio'
+                        : isSynthesizingAudio
+                        ? 'Synthesizing Gemini Neural Voice...'
+                        : 'Play Broadcast Audio'
+                    }
+                  >
+                    {isSynthesizingAudio ? (
+                      <Sparkles className="w-4 h-4 animate-spin text-white" />
+                    ) : isPlayingAudio ? (
+                      <Pause className="w-4 h-4" />
+                    ) : (
+                      <Play className="w-4 h-4 ml-0.5" />
                     )}
+                  </button>
+                  <div>
+                    <div className="text-xs font-extrabold text-white flex items-center gap-1.5">
+                      <span>
+                        {isSynthesizingAudio
+                          ? 'Synthesizing Gemini Voice...'
+                          : isPlayingAudio
+                          ? 'Broadcasting Audio...'
+                          : 'Listen to Broadcast'}
+                      </span>
+                      {isPlayingAudio && (
+                        <span className="flex items-center gap-0.5 text-amber-400">
+                          <span className="w-1 h-3 bg-amber-400 animate-pulse rounded-full"></span>
+                          <span className="w-1 h-4 bg-amber-400 animate-pulse delay-75 rounded-full"></span>
+                          <span className="w-1 h-2 bg-amber-400 animate-pulse delay-150 rounded-full"></span>
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-400">
+                      {selectedPersona === 'dual'
+                        ? 'Dual-speaker banter: Coach Sal (Fenrir) & Dr. Chloe (Kore)'
+                        : selectedPersona === 'sal'
+                        ? 'Coach Sal Ditkofsky (Fenrir neural voice)'
+                        : selectedPersona === 'chloe'
+                        ? 'Dr. Chloe Vance (Kore neural voice)'
+                        : 'The Commish AI (Puck neural voice)'}
+                    </p>
                   </div>
-                  <p className="text-[10px] text-slate-400">
-                    Voice synthesizer tuned to on-air dialogue
-                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSpeechRate((prev) => (prev === 1.0 ? 1.25 : prev === 1.25 ? 1.5 : 1.0))}
+                    className="px-2 py-1 rounded bg-[#0B0F17] border border-slate-700 text-[10px] font-mono text-slate-300 hover:text-white cursor-pointer"
+                    title="Playback Speed"
+                  >
+                    {speechRate}x
+                  </button>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setSpeechRate((prev) => (prev === 1.0 ? 1.25 : prev === 1.25 ? 1.5 : 1.0))}
-                  className="px-2 py-1 rounded bg-[#0B0F17] border border-slate-700 text-[10px] font-mono text-slate-300 hover:text-white"
-                  title="Playback Speed"
-                >
-                  {speechRate}x
-                </button>
-              </div>
+              {/* Status Banner when Gemini vs Browser Fallback is active */}
+              {audioEngineType === 'gemini' && audioUrl ? (
+                <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-emerald-950/40 border border-emerald-500/40 text-[10px] font-mono text-emerald-300">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="font-bold">⚡ Gemini 3.1 Flash Neural Audio Active</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleSpeechAudio(true)}
+                    disabled={isSynthesizingAudio}
+                    className="px-2 py-0.5 rounded bg-emerald-900/80 hover:bg-emerald-800 text-emerald-200 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isSynthesizingAudio ? 'animate-spin' : ''}`} />
+                    <span>Regenerate</span>
+                  </button>
+                </div>
+              ) : audioEngineType === 'browser' ? (
+                <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-amber-950/40 border border-amber-500/50 text-[10px] font-mono text-amber-300">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                    <span className="font-bold">🎙️ Browser Speech Fallback Active</span>
+                    <span className="text-slate-500 hidden sm:inline">•</span>
+                    <span className="text-amber-200/80 text-[10px] truncate hidden sm:inline">
+                      {ttsNotice || 'Rate limit cooldown.'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleSpeechAudio(true)}
+                    disabled={isSynthesizingAudio}
+                    className="px-2 py-0.5 rounded bg-gradient-to-r from-orange-600 to-amber-600 hover:brightness-110 text-white text-[10px] font-bold flex items-center gap-1 cursor-pointer shrink-0"
+                  >
+                    <Sparkles className={`w-3 h-3 ${isSynthesizingAudio ? 'animate-spin' : ''}`} />
+                    <span>Retry Gemini Voice</span>
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             {/* Radio Commentary Dialogue Box */}

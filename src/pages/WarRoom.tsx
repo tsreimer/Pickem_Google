@@ -40,7 +40,7 @@ export const WarRoom: React.FC = () => {
                 ? '⚡ Touchdown shift impacts standings'
                 : isKcWinner
                 ? '🏁 FINAL: All Sunday early window games concluded'
-                : '⚡ Yahoo Group #13003 Live Ingestion Active • Todd Reimer: LAC (16), JAX (15), DET (14)'}
+                : '⚡ Initech Invitational Live Ingestion Active • Todd Reimer: LAC (16), JAX (15), DET (14)'}
             </span>
           </div>
         </div>
@@ -58,7 +58,7 @@ export const WarRoom: React.FC = () => {
             }`}
           >
             <Table className="w-3.5 h-3.5" />
-            <span>1. Yahoo Group #13003 Picks Matrix</span>
+            <span>1. Initech Invitational Picks Matrix</span>
             <span className="px-1.5 py-0.2 rounded text-[10px] bg-emerald-500/20 text-emerald-300 font-mono">
               MATCHED
             </span>
@@ -77,11 +77,11 @@ export const WarRoom: React.FC = () => {
         </div>
         <div className="text-xs font-mono text-slate-400 flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>Initech Invitational (Group #13003) • 12 Teams</span>
+          <span>Initech Invitational • 12 Teams</span>
         </div>
       </div>
 
-      {/* TAB 1: Authenticated Yahoo Group Picks Matrix */}
+      {/* TAB 1: Authenticated Initech Invitational Picks Matrix */}
       {warRoomSubTab === 'yahoo_matrix' && (
         <YahooGroupPicksTable />
       )}

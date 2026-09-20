@@ -420,7 +420,7 @@ export const Strategist: React.FC = () => {
             </div>
 
             <p className="text-xs text-slate-300 max-w-3xl leading-relaxed">
-              Welcome to your private Initech Yahoo Pool War Room. This portal is strictly confidential to you: analyze your personal 16-game confidence portfolio, listen to Coach Sal's pre-buffered voice strategy briefing, explore dynamic game-by-game recommendations, and map your Monday Night clinch scenarios.
+              Welcome to your private Initech Invitational War Room. This portal is strictly confidential to you: analyze your personal 16-game confidence portfolio, listen to Coach Sal's pre-buffered voice strategy briefing, explore dynamic game-by-game recommendations, and map your Monday Night clinch scenarios.
             </p>
           </div>
 
@@ -482,7 +482,7 @@ export const Strategist: React.FC = () => {
           <div className="p-3 rounded-xl bg-[#151D2A] border border-slate-800">
             <div className="text-[10px] font-mono text-slate-400 uppercase">Current Rank</div>
             <div className="text-xl font-black text-white mt-0.5">#{activeTeam?.rank || 8}</div>
-            <div className="text-[10px] font-mono text-slate-500">Initech Yahoo #13003</div>
+            <div className="text-[10px] font-mono text-slate-500">Initech Invitational</div>
           </div>
 
           <div className="p-3 rounded-xl bg-[#151D2A] border border-slate-800">

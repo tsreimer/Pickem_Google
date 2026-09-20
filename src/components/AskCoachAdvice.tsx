@@ -23,6 +23,7 @@ import {
   TrendingUp,
   MessageSquare,
   Zap,
+  RefreshCw,
 } from 'lucide-react';
 
 export interface CoachAdviceData {
@@ -106,10 +107,23 @@ export const AskCoachAdvice: React.FC<AskCoachAdviceProps> = ({
 
   // Audio Speech Synthesis Playback
   const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
+  const [isSynthesizingAudio, setIsSynthesizingAudio] = useState<boolean>(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioEngineType, setAudioEngineType] = useState<'gemini' | 'browser' | null>(null);
+  const [ttsNotice, setTtsNotice] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   const [activeSentenceIndex, setActiveSentenceIndex] = useState<number>(-1);
   const [totalSentences, setTotalSentences] = useState<number>(0);
   const [speechSpeed, setSpeechSpeed] = useState<number>(1.0);
   const [shareSuccess, setShareSuccess] = useState<boolean>(false);
+
+  // Sync speechSpeed with audioRef
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = speechSpeed;
+    }
+  }, [speechSpeed]);
 
   // Setup Web Speech Recognition if available in browser
   useEffect(() => {
@@ -166,10 +180,11 @@ export const AskCoachAdvice: React.FC<AskCoachAdviceProps> = ({
     if (!q) return;
 
     setIsLoading(true);
-    // Stop any active speech
-    speechEngine.stop();
-    setIsPlayingAudio(false);
-    setActiveSentenceIndex(-1);
+    // Stop any active audio
+    handleStopAudio();
+    setAudioUrl(null);
+    setAudioEngineType(null);
+    setTtsNotice(null);
 
     try {
       const res = await fetch('/api/coach/ask-advice', {
@@ -201,19 +216,94 @@ export const AskCoachAdvice: React.FC<AskCoachAdviceProps> = ({
     }
   }, [selectedTeamId]);
 
-  // Audio Playback Controls via speechEngine
-  const handlePlayAudio = () => {
+  // Audio Playback Controls via Gemini Neural TTS with instant fallback
+  const handlePlayAudio = async (forceGemini: boolean = false) => {
     if (!adviceData) return;
 
     if (isPlayingAudio) {
-      speechEngine.stop();
-      setIsPlayingAudio(false);
-      setActiveSentenceIndex(-1);
+      handleStopAudio();
       return;
     }
 
-    const scriptToSpeak = `${adviceData.headline}. ${adviceData.verbalAdvice}. Golden Rule: ${adviceData.goldenRule}`;
+    const scriptToSpeak = `${adviceData.headline}. ${adviceData.verbalAdvice} Remember Coach's golden rule: ${adviceData.goldenRule}`;
 
+    // If neural audio is already cached, play via HTMLAudioElement
+    if (!forceGemini && audioUrl && audioRef.current) {
+      try {
+        audioRef.current.playbackRate = speechSpeed;
+        await audioRef.current.play();
+        setIsPlayingAudio(true);
+        setAudioEngineType('gemini');
+        return;
+      } catch (err) {
+        console.warn('Cached audio playback failed, generating fresh audio:', err);
+      }
+    }
+
+    // Synthesize via Gemini 3.1 Flash Neural TTS
+    setIsSynthesizingAudio(true);
+    setTtsNotice(null);
+
+    const voiceName = selectedCoach === 'sal' ? 'Fenrir' : selectedCoach === 'chloe' ? 'Kore' : 'Puck';
+    const stylePrompt =
+      selectedCoach === 'sal'
+        ? 'Coach Sal Ditkofsky, passionate 1985 Bears disciple and South-Side Chicago beef stand operator. Deep, intense, gravelly, authentic Ditka swagger, direct and punchy.'
+        : selectedCoach === 'chloe'
+        ? 'Dr. Chloe Vance, MIT Sloan Sports Analytics director, high-speed articulate data scientist. Sharp, crisp, analytical swagger.'
+        : 'The Commish AI, official pool commissioner, authoritative, robotic chime, precise statistical ruling.';
+
+    try {
+      const res = await fetch('/api/tts/synthesize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: scriptToSpeak,
+          voiceName,
+          stylePrompt,
+          characterPersona: stylePrompt,
+          directorsNotes: stylePrompt,
+          force: forceGemini,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.audioUrl && !data.fallbackToSpeechSynthesis) {
+        setAudioUrl(data.audioUrl);
+        setAudioEngineType('gemini');
+        setTtsNotice(null);
+
+        if (audioRef.current) {
+          audioRef.current.src = data.audioUrl;
+          audioRef.current.playbackRate = speechSpeed;
+          audioRef.current.load();
+          await audioRef.current.play();
+          setIsPlayingAudio(true);
+        }
+        return;
+      }
+
+      // If server instructed fallback due to quota or demand
+      setAudioEngineType('browser');
+      setTtsNotice(
+        data.message ||
+          (data.isHighDemand
+            ? 'Gemini TTS high demand spike. Playing with browser speech engine.'
+            : 'Gemini TTS rate limit active. Playing with browser speech engine.')
+      );
+      playWithSpeechEngine(scriptToSpeak);
+    } catch (err) {
+      console.warn('Gemini synthesis request failed, using browser speech fallback:', err);
+      setAudioEngineType('browser');
+      setTtsNotice('Network error connecting to Gemini TTS. Playing with browser speech engine.');
+      playWithSpeechEngine(scriptToSpeak);
+    } finally {
+      setIsSynthesizingAudio(false);
+    }
+  };
+
+  const playWithSpeechEngine = (scriptToSpeak: string) => {
+    speechEngine.stop();
     speechEngine.speakScript(scriptToSpeak, {
       speaker: selectedCoach,
       rate: speechSpeed,
@@ -236,6 +326,10 @@ export const AskCoachAdvice: React.FC<AskCoachAdviceProps> = ({
   };
 
   const handleStopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
     speechEngine.stop();
     setIsPlayingAudio(false);
     setActiveSentenceIndex(-1);
@@ -246,10 +340,14 @@ export const AskCoachAdvice: React.FC<AskCoachAdviceProps> = ({
     const nextIdx = (speeds.indexOf(speechSpeed) + 1) % speeds.length;
     const nextSpeed = speeds[nextIdx];
     setSpeechSpeed(nextSpeed);
-    if (isPlayingAudio && adviceData) {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = nextSpeed;
+    }
+    if (isPlayingAudio && audioEngineType === 'browser' && adviceData) {
       speechEngine.stop();
       setTimeout(() => {
-        handlePlayAudio();
+        const scriptToSpeak = `${adviceData.headline}. ${adviceData.verbalAdvice} Golden Rule: ${adviceData.goldenRule}`;
+        playWithSpeechEngine(scriptToSpeak);
       }, 100);
     }
   };
@@ -305,8 +403,9 @@ export const AskCoachAdvice: React.FC<AskCoachAdviceProps> = ({
             type="button"
             onClick={() => {
               setSelectedCoach('sal');
-              speechEngine.stop();
-              setIsPlayingAudio(false);
+              handleStopAudio();
+              setAudioUrl(null);
+              setAudioEngineType(null);
             }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
               selectedCoach === 'sal'
@@ -322,8 +421,9 @@ export const AskCoachAdvice: React.FC<AskCoachAdviceProps> = ({
             type="button"
             onClick={() => {
               setSelectedCoach('chloe');
-              speechEngine.stop();
-              setIsPlayingAudio(false);
+              handleStopAudio();
+              setAudioUrl(null);
+              setAudioEngineType(null);
             }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
               selectedCoach === 'chloe'
@@ -339,8 +439,9 @@ export const AskCoachAdvice: React.FC<AskCoachAdviceProps> = ({
             type="button"
             onClick={() => {
               setSelectedCoach('commish');
-              speechEngine.stop();
-              setIsPlayingAudio(false);
+              handleStopAudio();
+              setAudioUrl(null);
+              setAudioEngineType(null);
             }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
               selectedCoach === 'commish'
@@ -474,17 +575,25 @@ export const AskCoachAdvice: React.FC<AskCoachAdviceProps> = ({
               </div>
 
               {/* Audio Controls & Share Button */}
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={handlePlayAudio}
+                  onClick={() => handlePlayAudio(false)}
+                  disabled={isSynthesizingAudio}
                   className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-md cursor-pointer ${
                     isPlayingAudio
                       ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
+                      : isSynthesizingAudio
+                      ? 'bg-amber-600 text-white animate-pulse cursor-wait'
                       : 'bg-emerald-600 hover:bg-emerald-500 text-white'
                   }`}
                 >
-                  {isPlayingAudio ? (
+                  {isSynthesizingAudio ? (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 animate-spin text-white" />
+                      <span>Synthesizing Voice...</span>
+                    </>
+                  ) : isPlayingAudio ? (
                     <>
                       <Pause className="w-3.5 h-3.5" />
                       <span>Pause Voice</span>
@@ -492,7 +601,7 @@ export const AskCoachAdvice: React.FC<AskCoachAdviceProps> = ({
                   ) : (
                     <>
                       <Play className="w-3.5 h-3.5 fill-current" />
-                      <span>Listen to {adviceData.coach === 'sal' ? 'Coach Sal' : 'Speaker'}</span>
+                      <span>Listen to {adviceData.coach === 'sal' ? 'Coach Sal' : adviceData.coach === 'chloe' ? 'Dr. Chloe' : 'The Commish'}</span>
                     </>
                   )}
                 </button>
@@ -502,7 +611,7 @@ export const AskCoachAdvice: React.FC<AskCoachAdviceProps> = ({
                     <button
                       type="button"
                       onClick={handleStopAudio}
-                      className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs"
+                      className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs cursor-pointer"
                       title="Reset Audio"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
@@ -510,7 +619,7 @@ export const AskCoachAdvice: React.FC<AskCoachAdviceProps> = ({
                     <button
                       type="button"
                       onClick={handleSpeedToggle}
-                      className="px-2 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono font-bold"
+                      className="px-2 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono font-bold cursor-pointer"
                       title="Toggle Speed"
                     >
                       {speechSpeed}x
@@ -538,6 +647,62 @@ export const AskCoachAdvice: React.FC<AskCoachAdviceProps> = ({
                 </button>
               </div>
             </div>
+
+            {/* Hidden HTML5 Audio Element for Gemini Neural Audio */}
+            <audio
+              ref={audioRef}
+              onEnded={() => {
+                setIsPlayingAudio(false);
+                setActiveSentenceIndex(-1);
+              }}
+              onError={(e) => {
+                console.warn('Audio element error:', e);
+                setIsPlayingAudio(false);
+              }}
+            />
+
+            {/* Audio Voice Quality & Fallback Status Banner */}
+            {audioEngineType === 'gemini' && audioUrl ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-emerald-950/40 border border-emerald-500/40 text-[11px] font-mono text-emerald-300">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="font-bold">⚡ Gemini 3.1 Flash Neural Audio</span>
+                  <span className="text-slate-500">•</span>
+                  <span className="text-emerald-400">
+                    Voice: {selectedCoach === 'sal' ? 'Fenrir (Coach Sal)' : selectedCoach === 'chloe' ? 'Kore (Dr. Chloe)' : 'Puck (Commish)'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handlePlayAudio(true)}
+                  disabled={isSynthesizingAudio}
+                  className="px-2 py-0.5 rounded bg-emerald-900/80 hover:bg-emerald-800 text-emerald-200 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isSynthesizingAudio ? 'animate-spin' : ''}`} />
+                  <span>Regenerate</span>
+                </button>
+              </div>
+            ) : audioEngineType === 'browser' ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-amber-950/40 border border-amber-500/50 text-[11px] font-mono text-amber-300">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                  <span className="font-bold">🎙️ Browser Speech Fallback Active</span>
+                  <span className="text-slate-500 hidden sm:inline">•</span>
+                  <span className="text-amber-200/80 text-[10px] hidden sm:inline">
+                    {ttsNotice || 'Rate limit cooldown. Seamlessly using system voice.'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handlePlayAudio(true)}
+                  disabled={isSynthesizingAudio}
+                  className="px-2 py-0.5 rounded bg-gradient-to-r from-orange-600 to-amber-600 hover:brightness-110 text-white text-[10px] font-bold flex items-center gap-1 cursor-pointer shadow"
+                >
+                  <Sparkles className={`w-3 h-3 ${isSynthesizingAudio ? 'animate-spin' : ''}`} />
+                  <span>Retry Gemini Neural Voice</span>
+                </button>
+              </div>
+            ) : null}
 
             {/* Headline */}
             <h4 className="text-base sm:text-lg font-black text-amber-300 tracking-tight leading-snug">

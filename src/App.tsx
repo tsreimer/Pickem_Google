@@ -6,6 +6,7 @@ import { WarRoom } from './pages/WarRoom';
 import { Strategist } from './pages/Strategist';
 import { Watercooler } from './pages/Watercooler';
 import { FranchiseVault } from './pages/FranchiseVault';
+import { Commissioner } from './pages/Commissioner';
 import { IdentityModal } from './components/IdentityModal';
 import { NotificationDrawer } from './components/NotificationDrawer';
 import { ArchitectureSpecModal } from './components/ArchitectureSpecModal';

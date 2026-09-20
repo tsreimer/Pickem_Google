@@ -80,8 +80,14 @@ class SpeechEngine {
 
     this.stop();
 
-    // Clean and split text into complete spoken sentences
-    const cleanText = text.replace(/\[.*?\]/g, '').trim();
+    // Clean and split text into complete spoken sentences for Web Speech Synthesis
+    // Convert pause tags into natural pauses (commas) and strip bracketed/parenthesized vocal tags
+    const cleanText = text
+      .replace(/\[(?:pause|dramatic pause|long pause|short pause)\]/gi, ', ')
+      .replace(/\[.*?\]/g, '')
+      .replace(/\(.*?\)/g, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
     const rawSentences = cleanText.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g) || [cleanText];
     this.currentSentences = rawSentences.map(s => s.trim()).filter(s => s.length > 0);
     this.currentSentenceIndex = 0;

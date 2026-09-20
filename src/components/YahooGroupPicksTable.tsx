@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { YAHOO_WEEK_GAMES, YAHOO_GROUP_PICKS_MATRIX } from '../data/mockData';
-import { ExternalLink, Info, CheckCircle2, Lock, Eye, AlertCircle } from 'lucide-react';
+import { ExternalLink, Info, CheckCircle2, Lock, Eye, AlertCircle, Clock } from 'lucide-react';
+import { useTeam } from '../context/TeamContext';
 
 export const YahooGroupPicksTable: React.FC = () => {
   const [themeMode, setThemeMode] = useState<'yahoo_classic' | 'dark_cyber'>('yahoo_classic');
   const [selectedGameFilter, setSelectedGameFilter] = useState<number | 'all'>('all');
+  const { yahooLockWindows } = useTeam();
 
   const games = YAHOO_WEEK_GAMES;
   const matrix = YAHOO_GROUP_PICKS_MATRIX;
@@ -19,7 +21,7 @@ export const YahooGroupPicksTable: React.FC = () => {
           </div>
           <div>
             <div className="text-white font-bold text-sm flex items-center gap-2">
-              <span>Synchronized: 100% Match with Yahoo Group #13003</span>
+              <span>Synchronized: 100% Match with Initech Invitational</span>
               <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold">
                 VERIFIED
               </span>
@@ -84,7 +86,7 @@ export const YahooGroupPicksTable: React.FC = () => {
                   INITECH INVITATIONAL
                 </h2>
                 <span className="text-xs font-mono font-bold text-slate-500">
-                  GROUP ID# 13003
+                  OFFICIAL LEAGUE POOL
                 </span>
               </div>
               <div className="text-xs flex items-center gap-1.5 mt-0.5">
@@ -98,7 +100,7 @@ export const YahooGroupPicksTable: React.FC = () => {
 
           <div className="flex items-center gap-2 text-xs font-mono">
             <a
-              href="https://football.fantasysports.yahoo.com/pickem/13003"
+              href="https://football.fantasysports.yahoo.com/pickem"
               target="_blank"
               rel="noreferrer"
               className="px-3 py-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 border border-purple-300 text-purple-800 font-semibold flex items-center gap-1.5 transition"
@@ -144,6 +146,49 @@ export const YahooGroupPicksTable: React.FC = () => {
               {p}
             </span>
           ))}
+        </div>
+
+        {/* Lock Windows Cadence Strip */}
+        <div
+          className={`px-4 py-2 border-b text-[11px] flex flex-wrap items-center justify-between gap-2 font-mono ${
+            themeMode === 'yahoo_classic'
+              ? 'bg-purple-50/50 border-purple-100 text-slate-700'
+              : 'bg-[#0B0F17] border-slate-800 text-slate-400'
+          }`}
+        >
+          <div className="flex items-center gap-1.5 font-sans font-semibold">
+            <Lock className="w-3.5 h-3.5 text-purple-500" />
+            <span className={themeMode === 'yahoo_classic' ? 'text-slate-800 font-bold' : 'text-slate-200 font-bold'}>
+              Kickoff Lock Windows:
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            {yahooLockWindows.map((win) => {
+              const isSynced = win.status === 'synced';
+              const isLocked = win.status === 'locked';
+
+              return (
+                <span
+                  key={win.id}
+                  title={`${win.name} (${win.typicalKickoff}) • ${win.gamesCount} games`}
+                  className={`px-2 py-0.5 rounded text-[10px] font-mono flex items-center gap-1 border ${
+                    isSynced
+                      ? themeMode === 'yahoo_classic'
+                        ? 'bg-emerald-100 border-emerald-300 text-emerald-800'
+                        : 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300'
+                      : isLocked
+                      ? 'bg-amber-950/40 border-amber-500/40 text-amber-300'
+                      : 'bg-slate-800/40 border-slate-700 text-slate-400'
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${isSynced ? 'bg-emerald-500' : isLocked ? 'bg-amber-500' : 'bg-slate-500'}`} />
+                  <span>{win.kickoffLabel}</span>
+                  <span className="opacity-75">({isSynced ? 'Synced' : isLocked ? 'Locked' : 'Pending'})</span>
+                </span>
+              );
+            })}
+          </div>
         </div>
 
         {/* The Group Picks Table */}
@@ -367,7 +412,7 @@ export const YahooGroupPicksTable: React.FC = () => {
 
           <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1">
             <Lock className="w-3.5 h-3.5 text-slate-400" />
-            <span>Yahoo Anti-Cheat Lock Active (Group #13003)</span>
+            <span>Anti-Cheat Lock Active (The League)</span>
           </div>
         </div>
       </div>

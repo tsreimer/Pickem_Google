@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTeam } from '../context/TeamContext';
-import { Bell, FileText, UserCheck, Flame, Cpu, Radio, Award, Home as HomeIcon, Sparkles } from 'lucide-react';
+import { Bell, FileText, UserCheck, Flame, Cpu, Radio, Award, Home as HomeIcon, Sparkles, Shield } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const {
@@ -38,14 +38,14 @@ export const Header: React.FC = () => {
                   Initech Invitational
                 </h1>
                 <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-purple-950/80 border border-purple-800 text-purple-300 font-bold">
-                  Yahoo #13003
+                  The League
                 </span>
                 <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-800 text-emerald-400 font-bold hidden sm:inline-block">
                   v2.4 ILP
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 font-medium hidden sm:block">
-                Weekly Audio Dispatch • Yahoo Pick'em Intelligence • 10 Active Teams
+                Weekly Audio Dispatch • League Pick'em Intelligence • 10 Active Teams
               </p>
             </div>
           </button>
@@ -56,7 +56,7 @@ export const Header: React.FC = () => {
               onClick={() => setIsCommentarySidebarOpen(true)}
               className="p-2 rounded-lg bg-red-950/70 border border-red-800 text-red-300 hover:text-white relative"
               aria-label="AI Commentary"
-              title="AI Broadcast Commentary (Gemini 3.8 Flash)"
+              title="AI Broadcast Commentary (Gemini TTS)"
             >
               <Radio className="w-4 h-4 text-amber-400" />
               <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500"></span>
@@ -64,10 +64,10 @@ export const Header: React.FC = () => {
             <button
               onClick={() => setIsYahooSyncModalOpen(true)}
               className="px-2 py-1.5 rounded-lg bg-purple-950/70 border border-purple-800 text-[11px] font-mono text-purple-200 font-bold flex items-center gap-1"
-              title="Yahoo Group #13003"
+              title="The League Sync"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-              #13003
+              League Sync
             </button>
             <button
               onClick={() => setIsNotificationOpen(true)}
@@ -160,6 +160,24 @@ export const Header: React.FC = () => {
             <Award className={`w-3.5 h-3.5 ${activeTab === 'vault' ? 'text-black' : 'text-blue-400'}`} />
             <span>The Vault</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('commissioner')}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all whitespace-nowrap ${
+              activeTab === 'commissioner'
+                ? 'bg-amber-400 text-black font-bold shadow-md shadow-amber-500/20'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+            }`}
+            title="Commissioner Dashboard & Gemini TTS Audio Profile Studio"
+          >
+            <Shield className={`w-3.5 h-3.5 ${activeTab === 'commissioner' ? 'text-black' : 'text-amber-400'}`} />
+            <span>The Commish</span>
+            <span className={`text-[9px] px-1 py-0.5 rounded font-mono font-bold uppercase ${
+              activeTab === 'commissioner' ? 'bg-black/20 text-black' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+            }`}>
+              TTS Studio
+            </span>
+          </button>
         </nav>
 
         {/* Action Controls & Frictionless Identity (Desktop) */}
@@ -176,14 +194,14 @@ export const Header: React.FC = () => {
             <span className="tracking-tight">AI Commentary</span>
           </button>
 
-          {/* Yahoo League 13003 Live Sync Trigger */}
+          {/* Initech Invitational Live Sync Trigger */}
           <button
             onClick={() => setIsYahooSyncModalOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-950/60 hover:bg-purple-900/80 border border-purple-800/80 text-purple-200 text-xs font-semibold transition group shadow-sm shadow-purple-900/20"
-            title="Yahoo Pro Football Pick'em • Group #13003 (Click for live ingestion)"
+            title="Initech Invitational • League Pick'em (Click for live ingestion)"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="font-mono font-bold text-white">Yahoo #13003</span>
+            <span className="font-mono font-bold text-white">The League</span>
           </button>
 
           {/* Spec View Button */}

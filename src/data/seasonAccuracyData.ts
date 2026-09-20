@@ -53,7 +53,7 @@ export const LEAGUE_SEASON_BENCHMARKS = {
   seasonUpsetFrequency: 34.8, // 34.8% of games were upsets
 };
 
-// Realistic, rich season data across Weeks 1 to 7 for all franchises in Yahoo Group #13003
+// Realistic, rich season data across Weeks 1 to 7 for all franchises in the Initech Invitational
 export const TEAMS_SEASON_ACCURACY: Record<string, TeamSeasonAccuracy> = {
   'team-todd': {
     teamId: 'team-todd',
@@ -1116,7 +1116,7 @@ export function getTeamSeasonAccuracy(teamId: string, teamName?: string, ownerNa
   // Generate realistic data for any other franchise
   const baseAccuracy = 61.0;
   const weeklyTrends: WeeklyAccuracyRecord[] = [
-    { week: 1, weekLabel: 'Wk 1', gamesCount: 16, correctCount: 9, accuracy: 56.3, pointsEarned: 80, pointsPossible: 136, confidenceEfficiency: 58.8, leagueAvgAccuracy: 51.5, leagueAvgEfficiency: 52.4, vegasFavoriteAccuracy: 56.3, topPerformerAccuracy: 81.3, cumulativeAccuracy: 56.3, cumulativeEfficiency: 58.8, cumulativeLeagueAvg: 51.5, anchorRecord: '3/4 (75%)', anchorAccuracy: 75.0, weeklyRank: 7, highlight: 'Week 1 opening slate in Yahoo Group 13003.', notes: 'Absorbed SoFi volatility.' },
+    { week: 1, weekLabel: 'Wk 1', gamesCount: 16, correctCount: 9, accuracy: 56.3, pointsEarned: 80, pointsPossible: 136, confidenceEfficiency: 58.8, leagueAvgAccuracy: 51.5, leagueAvgEfficiency: 52.4, vegasFavoriteAccuracy: 56.3, topPerformerAccuracy: 81.3, cumulativeAccuracy: 56.3, cumulativeEfficiency: 58.8, cumulativeLeagueAvg: 51.5, anchorRecord: '3/4 (75%)', anchorAccuracy: 75.0, weeklyRank: 7, highlight: 'Week 1 opening slate in the Initech Invitational.', notes: 'Absorbed SoFi volatility.' },
     { week: 2, weekLabel: 'Wk 2', gamesCount: 16, correctCount: 10, accuracy: 62.5, pointsEarned: 88, pointsPossible: 136, confidenceEfficiency: 64.7, leagueAvgAccuracy: 60.2, leagueAvgEfficiency: 61.8, vegasFavoriteAccuracy: 62.5, topPerformerAccuracy: 75.0, cumulativeAccuracy: 59.4, cumulativeEfficiency: 61.8, cumulativeLeagueAvg: 55.9, anchorRecord: '3/4 (75%)', anchorAccuracy: 75.0, weeklyRank: 6, highlight: 'Steady week on afternoon chalk.', notes: 'Protected core leverage.' },
     { week: 3, weekLabel: 'Wk 3', gamesCount: 16, correctCount: 9, accuracy: 56.3, pointsEarned: 82, pointsPossible: 136, confidenceEfficiency: 60.3, leagueAvgAccuracy: 57.8, leagueAvgEfficiency: 58.2, vegasFavoriteAccuracy: 56.3, topPerformerAccuracy: 68.8, cumulativeAccuracy: 58.3, cumulativeEfficiency: 61.3, cumulativeLeagueAvg: 56.5, anchorRecord: '2/4 (50%)', anchorAccuracy: 50.0, weeklyRank: 8, highlight: 'Mid-table battle in group.', notes: 'Weather impacted passing attacks.' },
     { week: 4, weekLabel: 'Wk 4', gamesCount: 16, correctCount: 11, accuracy: 68.8, pointsEarned: 96, pointsPossible: 136, confidenceEfficiency: 70.6, leagueAvgAccuracy: 64.1, leagueAvgEfficiency: 67.5, vegasFavoriteAccuracy: 68.8, topPerformerAccuracy: 81.3, cumulativeAccuracy: 60.9, cumulativeEfficiency: 63.6, cumulativeLeagueAvg: 58.4, anchorRecord: '3/4 (75%)', anchorAccuracy: 75.0, weeklyRank: 5, highlight: 'Bounced back above 65% efficiency.', notes: 'Clean anchor performance.' },

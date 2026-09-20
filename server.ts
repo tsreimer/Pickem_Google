@@ -17,10 +17,14 @@ app.use(express.json());
 
 // Initialize Gemini client lazily/safely
 let geminiClient: GoogleGenAI | null = null;
+let currentGeminiKey: string = "";
 function getGeminiClient(): GoogleGenAI | null {
-  if (!geminiClient && process.env.GEMINI_API_KEY) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  if (!geminiClient || currentGeminiKey !== apiKey) {
+    currentGeminiKey = apiKey;
     geminiClient = new GoogleGenAI({
-      apiKey: process.env.GEMINI_API_KEY,
+      apiKey,
       httpOptions: {
         headers: {
           'User-Agent': 'aistudio-build',
@@ -43,13 +47,13 @@ app.get("/api/health", (req, res) => {
 // Sync status endpoint matching Section 2.0 Ingestion Engine
 app.get("/api/sync/status", (req, res) => {
   res.json({
-    leagueId: "13003",
-    leagueUrl: "https://football.fantasysports.yahoo.com/pickem/13003",
-    leagueName: "Yahoo Pro Football Pick'em (Group #13003)",
+    leagueId: "initech-invitational",
+    leagueUrl: "https://football.fantasysports.yahoo.com/pickem",
+    leagueName: "Initech Invitational League",
     status: "active",
     services: [
       { name: "sync_odds.py", target: "The Odds API", status: "active", cadence: "Tue / Thu 12:00 PM", lastRun: "24m ago" },
-      { name: "sync_picks.py", target: "Playwright + Yahoo Group 13003", status: "locked", cadence: "Thu 7:00 & 8:15 PM", lastRun: "Thu 8:15 PM" },
+      { name: "sync_picks.py", target: "Playwright + Initech Invitational", status: "locked", cadence: "Thu 7:00 & 8:15 PM", lastRun: "Thu 8:15 PM" },
       { name: "sync_live.py", target: "ESPN Live API", status: "streaming", cadence: "Sun 1:00 – 7:30 PM (3m cron)", lastRun: "12s ago" },
       { name: "solve_clinch.py", target: "Game Tree Engine", status: "ready", cadence: "Sun 7:45 PM", lastRun: "Sun 7:45 PM" },
       { name: "solve_pivots.py", target: "Nash Matrix Solver", status: "ready", cadence: "Mon 6:00 PM", lastRun: "Mon 6:00 PM" },
@@ -137,7 +141,7 @@ app.get("/api/nfl/live", async (req, res) => {
 
     res.json({
       success: true,
-      leagueGroup: "Yahoo Pick'em #13003",
+      leagueGroup: "The Initech Invitational",
       source: "ESPN Live Scoreboard API",
       seasonYear,
       weekNumber,
@@ -154,12 +158,12 @@ app.get("/api/nfl/live", async (req, res) => {
   }
 });
 
-// Yahoo Pick'em Group 13003 Configuration & Picks Ingestion
+// Initech Invitational Configuration & Picks Ingestion
 app.get("/api/yahoo/league", (req, res) => {
   res.json({
-    leagueId: "13003",
-    url: "https://football.fantasysports.yahoo.com/pickem/13003",
-    name: "Yahoo Pro Football Pick'em (Group 13003)",
+    leagueId: "initech-invitational",
+    url: "https://football.fantasysports.yahoo.com/pickem",
+    name: "The Initech Invitational",
     currentWeek: 1,
     seasonYear: 2026,
     format: "Confidence Points (1-16)",
@@ -172,11 +176,11 @@ app.get("/api/yahoo/league", (req, res) => {
   });
 });
 
-// Test Yahoo Group access with group password, invite link, or cookies
+// Test league access with group password, invite link, or cookies
 app.post("/api/yahoo/test-access", async (req, res) => {
   const { groupPassword = "", inviteUrl = "", cookie = "" } = req.body;
   try {
-    const targetUrl = inviteUrl || `https://football.fantasysports.yahoo.com/pickem/13003`;
+    const targetUrl = inviteUrl || `https://football.fantasysports.yahoo.com/pickem`;
     const headers: Record<string, string> = {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -206,7 +210,7 @@ app.post("/api/yahoo/test-access", async (req, res) => {
         ? "Yahoo returned Error #113: 'You are not a member of this group.' Automated scraping without Yahoo login session or valid member credentials is restricted by Yahoo."
         : isLoginRedirect
         ? "Yahoo redirected to login.yahoo.com for authentication."
-        : "Successfully accessed Yahoo group page!",
+        : "Successfully accessed league page!",
       testedUrl: targetUrl,
       hasPasswordProvided: Boolean(groupPassword),
     });
@@ -215,14 +219,14 @@ app.post("/api/yahoo/test-access", async (req, res) => {
   }
 });
 
-// Ingest / Parse pasted Yahoo Pick'em Group 13003 matrix
+// Ingest / Parse pasted Initech Invitational matrix
 app.post("/api/yahoo/parse-picks", (req, res) => {
   const { rawText = "" } = req.body;
   if (!rawText || typeof rawText !== "string") {
-    return res.status(400).json({ error: "Missing 'rawText' from Yahoo Pick'em Group 13003" });
+    return res.status(400).json({ error: "Missing 'rawText' from Initech Invitational" });
   }
 
-  // Simple resilient parser for pasted Yahoo pick matrix
+  // Simple resilient parser for pasted pick matrix
   const lines = rawText.split("\n").map(l => l.trim()).filter(Boolean);
   const parsedEntries: Array<{ teamName: string; pick: string; confidence?: number }> = [];
 
@@ -240,10 +244,260 @@ app.post("/api/yahoo/parse-picks", (req, res) => {
 
   res.json({
     success: true,
-    leagueId: "13003",
+    leagueId: "initech-invitational",
     parsedCount: parsedEntries.length,
     entries: parsedEntries,
     timestamp: new Date().toISOString(),
+  });
+});
+
+// Section 7.5: Yahoo Game Lock Windows & Automated Sync Engine
+// Derives the 5 canonical NFL lock windows (Thursday Evening, Sunday Morning, Sunday Afternoon, Sunday Evening, Monday Evening)
+export interface LockWindowRecord {
+  id: "thu_evening" | "sun_morning" | "sun_afternoon" | "sun_evening" | "mon_evening";
+  name: string;
+  kickoffLabel: string;
+  day: "Thursday" | "Sunday" | "Monday";
+  period: "Morning" | "Afternoon" | "Evening";
+  typicalKickoff: string;
+  status: "pending" | "locked" | "synced";
+  gamesCount: number;
+  gamesList: string[];
+  lockedAt?: string;
+  syncedAt?: string;
+  lastSyncResult?: string;
+  autoSyncTriggered?: boolean;
+}
+
+export interface SyncAuditEntry {
+  id: string;
+  timestamp: string;
+  windowId: string;
+  windowName: string;
+  status: "success" | "error" | "in_progress";
+  message: string;
+  gamesLockedCount: number;
+  revealedPicksCount: number;
+  triggerSource: "auto_daemon" | "manual_request" | "kickoff_hook";
+}
+
+let autoSyncEnabled = true;
+
+const yahooLockWindows: LockWindowRecord[] = [
+  {
+    id: "thu_evening",
+    name: "Thursday Evening Lock",
+    kickoffLabel: "Thu 8:15 PM",
+    day: "Thursday",
+    period: "Evening",
+    typicalKickoff: "Thursday 8:15 PM EDT (TNF)",
+    status: "synced",
+    gamesCount: 1,
+    gamesList: ["DAL @ NYG (Final: DAL 20 - NYG 15)"],
+    lockedAt: "2026-09-17T20:15:00-04:00",
+    syncedAt: "2026-09-17T20:15:09-04:00",
+    lastSyncResult: "All 12 Initech Invitational manager picks locked & ingested for TNF",
+    autoSyncTriggered: true,
+  },
+  {
+    id: "sun_morning",
+    name: "Sunday Morning Lock",
+    kickoffLabel: "Sun 1:00 PM",
+    day: "Sunday",
+    period: "Morning",
+    typicalKickoff: "Sunday 1:00 PM EDT (Early Slate)",
+    status: "synced",
+    gamesCount: 8,
+    gamesList: ["GB @ DET (Final: DET 31 - GB 29)", "CIN @ BAL (Final: BAL 41 - CIN 38)", "TEN @ NYJ", "IND @ CHI", "CLE @ JAX", "CAR @ TB", "MIA @ BUF", "NO @ ATL"],
+    lockedAt: "2026-09-20T13:00:00-04:00",
+    syncedAt: "2026-09-20T13:00:14-04:00",
+    lastSyncResult: "Early slate locked. 8 matchups revealed across 12 manager cards in matrix.",
+    autoSyncTriggered: true,
+  },
+  {
+    id: "sun_afternoon",
+    name: "Sunday Afternoon Lock",
+    kickoffLabel: "Sun 4:05 PM / 4:25 PM",
+    day: "Sunday",
+    period: "Afternoon",
+    typicalKickoff: "Sunday 4:25 PM EDT (Late Slate)",
+    status: "synced",
+    gamesCount: 4,
+    gamesList: ["BUF @ KC (Q4 01:18 • Sweat Game)", "DEN @ LAC (Final: LAC 23 - DEN 16)", "LAR @ ARI (Final: LAR 27 - ARI 24)", "WAS @ PHI (Scheduled)"],
+    lockedAt: "2026-09-20T16:25:00-04:00",
+    syncedAt: "2026-09-20T16:25:08-04:00",
+    lastSyncResult: "Late afternoon slate locked & synced. Active sweat game BUF @ KC streaming live.",
+    autoSyncTriggered: true,
+  },
+  {
+    id: "sun_evening",
+    name: "Sunday Evening Lock",
+    kickoffLabel: "Sun 8:20 PM",
+    day: "Sunday",
+    period: "Evening",
+    typicalKickoff: "Sunday 8:20 PM EDT (SNF)",
+    status: "pending",
+    gamesCount: 1,
+    gamesList: ["LV @ MIA (Sun 8:20 PM)"],
+    lastSyncResult: "Pending kickoff lock at 8:20 PM EDT. Automated sync will trigger immediately upon lock.",
+    autoSyncTriggered: false,
+  },
+  {
+    id: "mon_evening",
+    name: "Monday Evening Lock",
+    kickoffLabel: "Mon 8:15 PM",
+    day: "Monday",
+    period: "Evening",
+    typicalKickoff: "Monday 8:15 PM EDT (MNF)",
+    status: "pending",
+    gamesCount: 2,
+    gamesList: ["SF @ SEA (Mon 8:15 PM)", "BAL @ LAC (Mon 8:15 PM)"],
+    lastSyncResult: "Pending Monday Night Football lock. Automated sync scheduled after kickoff lock.",
+    autoSyncTriggered: false,
+  },
+];
+
+const syncAuditLogs: SyncAuditEntry[] = [
+  {
+    id: "audit-1",
+    timestamp: "2026-09-17T20:15:09-04:00",
+    windowId: "thu_evening",
+    windowName: "Thursday Evening Lock",
+    status: "success",
+    message: "Automated lock sync completed for Thursday Night Football (DAL @ NYG). 12/12 cards ingested.",
+    gamesLockedCount: 1,
+    revealedPicksCount: 12,
+    triggerSource: "auto_daemon",
+  },
+  {
+    id: "audit-2",
+    timestamp: "2026-09-20T13:00:14-04:00",
+    windowId: "sun_morning",
+    windowName: "Sunday Morning Lock",
+    status: "success",
+    message: "Automated lock sync completed for Sunday 1:00 PM early slate. 8 games locked, 96 picks revealed.",
+    gamesLockedCount: 8,
+    revealedPicksCount: 96,
+    triggerSource: "auto_daemon",
+  },
+  {
+    id: "audit-3",
+    timestamp: "2026-09-20T16:25:08-04:00",
+    windowId: "sun_afternoon",
+    windowName: "Sunday Afternoon Lock",
+    status: "success",
+    message: "Automated lock sync completed for Sunday late afternoon slate. Active sweat game BUF @ KC streaming live.",
+    gamesLockedCount: 4,
+    revealedPicksCount: 48,
+    triggerSource: "auto_daemon",
+  },
+];
+
+// Core function to trigger lock window sync
+function executeYahooLockSync(windowId?: string, triggerSource: "auto_daemon" | "manual_request" | "kickoff_hook" = "manual_request") {
+  const nowStr = new Date().toISOString();
+  const windowsToSync = windowId
+    ? yahooLockWindows.filter((w) => w.id === windowId)
+    : yahooLockWindows.filter((w) => w.status !== "synced");
+
+  const results: any[] = [];
+
+  for (const win of windowsToSync) {
+    win.status = "synced";
+    win.lockedAt = win.lockedAt || nowStr;
+    win.syncedAt = nowStr;
+    win.autoSyncTriggered = true;
+    win.lastSyncResult = `Locked & synced to Yahoo at ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}. All pool manager picks revealed.`;
+
+    const audit: SyncAuditEntry = {
+      id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      timestamp: nowStr,
+      windowId: win.id,
+      windowName: win.name,
+      status: "success",
+      message: `Yahoo Pick'em lock sync completed for ${win.name}. Picks locked across all 12 league managers.`,
+      gamesLockedCount: win.gamesCount,
+      revealedPicksCount: win.gamesCount * 12,
+      triggerSource,
+    };
+    syncAuditLogs.unshift(audit);
+    results.push({ windowId: win.id, name: win.name, status: "synced", timestamp: nowStr });
+  }
+
+  // Keep logs at max 30 items
+  if (syncAuditLogs.length > 30) {
+    syncAuditLogs.length = 30;
+  }
+
+  return results;
+}
+
+// Background auto-sync interval (runs every 60 seconds)
+setInterval(() => {
+  if (!autoSyncEnabled) return;
+  // Automatically sync any locked windows that haven't been synced yet
+  const pendingLocked = yahooLockWindows.filter((w) => w.status === "locked" && !w.autoSyncTriggered);
+  if (pendingLocked.length > 0) {
+    console.info(`[Yahoo Lock Daemon] Triggering automated sync for ${pendingLocked.length} newly locked game sets...`);
+    executeYahooLockSync(undefined, "auto_daemon");
+  }
+}, 60000);
+
+// Endpoint: Get all 5 Yahoo Lock Windows with current status
+app.get("/api/yahoo/lock-windows", (req, res) => {
+  res.json({
+    success: true,
+    leagueId: "initech-invitational",
+    leagueName: "The Initech Invitational",
+    autoSyncEnabled,
+    currentWeek: 1,
+    windows: yahooLockWindows,
+    totalGames: yahooLockWindows.reduce((acc, w) => acc + w.gamesCount, 0),
+    syncedGamesCount: yahooLockWindows.filter((w) => w.status === "synced").reduce((acc, w) => acc + w.gamesCount, 0),
+    recentAuditLogs: syncAuditLogs.slice(0, 5),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Endpoint: Trigger lock sync for a specific window or all pending windows
+app.post("/api/yahoo/sync-lock-window", (req, res) => {
+  const { windowId, triggerAll } = req.body || {};
+  const targetId = triggerAll ? undefined : windowId;
+  const syncedResults = executeYahooLockSync(targetId, "manual_request");
+
+  res.json({
+    success: true,
+    message: targetId
+      ? `Successfully synchronized Yahoo lock window: ${targetId}`
+      : "Synchronized all pending Yahoo game lock windows",
+    syncedWindows: syncedResults,
+    allWindows: yahooLockWindows,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Endpoint: Toggle auto-sync daemon
+app.post("/api/yahoo/auto-sync-toggle", (req, res) => {
+  const { enabled } = req.body || {};
+  if (typeof enabled === "boolean") {
+    autoSyncEnabled = enabled;
+  } else {
+    autoSyncEnabled = !autoSyncEnabled;
+  }
+
+  res.json({
+    success: true,
+    autoSyncEnabled,
+    message: `Yahoo lock auto-sync daemon is now ${autoSyncEnabled ? "ENABLED" : "PAUSED"}.`,
+  });
+});
+
+// Endpoint: Get Yahoo sync audit history
+app.get("/api/yahoo/sync-log", (req, res) => {
+  res.json({
+    success: true,
+    autoSyncEnabled,
+    logs: syncAuditLogs,
   });
 });
 
@@ -330,12 +584,72 @@ function saveAudioToDiskCache(cacheKey: string, data: { audioUrl: string; durati
 // Quota exhaustion cooldown tracker (prevents log spam and 429 errors when Gemini TTS daily limit is reached)
 let ttsQuotaCooldownUntil = 0;
 
-// Default Chicago Ditka Director & Scene Settings
-const DEFAULT_CHICAGO_PERSONA = 'Coach Sal "Da Bear" Ditkofsky (61-year-old Bridgeport Chicago superfan & retired steelworker, wearing a navy-and-orange sweater vest, thick mustache, chewing an unlit cigar, lifelong 1985 Bears diehard)';
+// Helper to normalize and sanitize bracket/parenthesis directions for Gemini Flash TTS
+// Directs vocal tone, pauses, word emphasis, and vocal sound effects (sighs, moans, groans, clears throat, laugh, fart noise, etc.)
+// Replaces physical action tags (slams fist on table, slaps table, adjusts glasses) with proper Flash TTS vocal cues
+export function normalizeTtsBracketTags(rawText: string): string {
+  if (!rawText) return rawText;
 
-const DEFAULT_CHICAGO_SCENE = "Back-corner laminate booth at Vito & Sal's Original Italian Beef & Sausage on 35th and Halsted in Chicago. Neon Old Style clock humming, smell of hot giardiniera and dipped au jus, CTA Orange Line 'L' train rumbling outside.";
+  let text = rawText;
 
-const DEFAULT_CHICAGO_DIRECTORS_NOTES = "Director's Note: Speak in an authentic, gravelly South-Side Chicago accent with the fiery, authoritative cadence of Coach Mike Ditka. Pronounce 'the' as 'da', 'this' as 'dis', 'that' as 'dat', 'with' as 'wit\'', and elongate broad Midwestern nasal 'A's ('Chicaaago', 'Daaaa Bears', 'baa-ck booth'). Include audible throat clears, sudden explosive disbelief, dramatic pauses, and thunderous table slaps.";
+  // Convert parenthesized directions e.g. (slams fist on table), (sighs), (groans) into bracketed tags [sighs]
+  text = text.replace(/\(([^)]+)\)/g, (match, inner) => {
+    const lower = inner.toLowerCase();
+    if (
+      lower.includes("sigh") ||
+      lower.includes("slam") ||
+      lower.includes("pause") ||
+      lower.includes("groan") ||
+      lower.includes("moan") ||
+      lower.includes("laugh") ||
+      lower.includes("fart") ||
+      lower.includes("cough") ||
+      lower.includes("gasp") ||
+      lower.includes("shout") ||
+      lower.includes("whisper") ||
+      lower.includes("tone") ||
+      lower.includes("throat") ||
+      lower.includes("fist") ||
+      lower.includes("desk") ||
+      lower.includes("table")
+    ) {
+      return `[${inner}]`;
+    }
+    return match;
+  });
+
+  // Map physical action directions to appropriate Gemini TTS audio/vocal cues
+  const physicalToAudioMap: Array<[RegExp, string]> = [
+    [/\[(?:slams?\s+fist(?:\s+on\s+(?:the\s+)?table)?|pounds?\s+(?:the\s+)?desk|slaps?\s+(?:the\s+)?(?:laminate\s+)?table)\]/gi, "[groans in disgust] [shouting with passion]"],
+    [/\[(?:points?\s+(?:cigar|finger)(?:\s+firmly)?(?:\s+at\s+the\s+chalkboard)?)\]/gi, "[clears throat] [emphasized]"],
+    [/\[(?:leans?\s+in(?:\s+with\s+ferocious\s+focus)?)\]/gi, "[shouting with passion] [pause]"],
+    [/\[(?:adjusts?\s+headset(?:\s+with\s+a\s+scowl)?)\]/gi, "[groans in disgust] [pause]"],
+    [/\[(?:tapping\s+stylus(?:\s+against\s+chart)?)\]/gi, "[crisp analytical tone] [fast paced]"],
+    [/\[(?:gavel\s+strikes(?:\s+ledger)?)\]/gi, "[deadpan monotone] [pause]"],
+    [/\[(?:sips?\s+(?:matcha\s+latte|matcha|coffee|water))\]/gi, "[crisp analytical tone]"],
+    [/\[(?:rapid\s+keystrokes)\]/gi, "[fast paced] [authoritative]"],
+    [/\[(?:smirks?\s+coolly)\]/gi, "[chuckles] [sarcastic]"],
+    [/\[(?:papers?\s+rustling(?:\s+wildly)?)\]/gi, "[hyperventilating] [groans in agony]"],
+    [/\[(?:adjusts?\s+(?:10-gallon\s+)?hat)\]/gi, "[boisterous drawl]"],
+    [/\[(?:spits?\s+toothpick)\]/gi, "[chuckles warmly]"],
+    [/\[(?:chews?\s+giardiniera)\]/gi, "[clears throat] [gravelly baritone]"],
+    [/\[(?:wipes?\s+counter|counter\s+slap)\]/gi, "[boisterous laugh]"],
+    [/\[(?:screams?\s+into\s+microphone)\]/gi, "[shouting furiously]"],
+  ];
+
+  for (const [pattern, replacement] of physicalToAudioMap) {
+    text = text.replace(pattern, replacement);
+  }
+
+  return text;
+}
+
+// Default Chicago Radio Director & Scene Settings
+const DEFAULT_CHICAGO_PERSONA = 'Coach Sal "Da Bear" (passionate football talk radio host, lifelong Chicago gridiron diehard)';
+
+const DEFAULT_CHICAGO_SCENE = "Inside Vito & Sal's sports studio on 35th and Halsted in Chicago.";
+
+const DEFAULT_CHICAGO_DIRECTORS_NOTES = "Director Note: Speak in an authentic, energetic, gravelly sports radio host tone with fiery passion, punchy pacing, natural pauses, and vivid vocal inflections.";
 
 // Default Co-Host: Dr. Chloe "The Algorithm" Vance (MIT Sloan Analytics)
 const DEFAULT_CHLOE_PERSONA = 'Dr. Chloe "The Algorithm" Vance (28-year-old MIT Sloan sports analytics director, NextGen Stats consultant, sharp, articulate, witty, sipping a matcha latte, armed with Expected Points Added and Monte Carlo models)';
@@ -376,15 +690,18 @@ async function synthesizeSpeechWithGemini(
   const scene = options?.sceneBackstory || DEFAULT_CHICAGO_SCENE;
   const notes = options?.directorsNotes || stylePrompt || DEFAULT_CHICAGO_DIRECTORS_NOTES;
 
+  const cleanedText = normalizeTtsBracketTags(text);
   let fullPrompt = options?.fullPromptPayload;
   if (!fullPrompt) {
     if (isMulti) {
       const s1 = speakerConfigs[0].speaker;
       const s2 = speakerConfigs[1].speaker;
-      fullPrompt = `TTS the following conversation between ${s1} and ${s2}. ${notes} Scene Setting: ${scene}.\n\n${text}`;
+      fullPrompt = `TTS the following conversation between ${s1} and ${s2}. ${notes}\n\n${cleanedText}`;
     } else {
-      fullPrompt = `[${notes} Scene Setting: ${scene}. Character Voice: ${persona}.]\n\n${text}`;
+      fullPrompt = `${notes}\n\n${cleanedText}`;
     }
+  } else {
+    fullPrompt = normalizeTtsBracketTags(fullPrompt);
   }
 
   const cacheKey = `${isMulti ? `MULTI::${speakerConfigs.map(s => `${s.speaker}:${s.voiceName}`).join('|')}` : voiceName}:::${fullPrompt.trim()}`;
@@ -455,17 +772,20 @@ async function synthesizeSpeechWithGemini(
         },
       });
 
-      // Wrap with 45s timeout for full WAV audio generation
+      // Wrap with 90s timeout for full WAV audio generation (including dual-speaker dialogues)
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Gemini TTS request timed out after 45s")), 45000)
+        setTimeout(() => reject(new Error("Gemini TTS request timed out after 90s")), 90000)
       );
 
       const response = (await Promise.race([generatePromise, timeoutPromise])) as any;
 
-      const candidatePart = response.candidates?.[0]?.content?.parts?.[0];
-      const base64Data = candidatePart?.inlineData?.data;
+      const candidateParts = response.candidates?.[0]?.content?.parts || [];
+      const audioPart = candidateParts.find((p: any) => p?.inlineData?.data);
+      const base64Data = audioPart?.inlineData?.data;
 
-      if (base64Data) {
+      if (!base64Data) {
+        console.warn(`[Gemini TTS] No inlineData audio in response. Candidates: ${response.candidates?.length}, Parts: ${candidateParts.length}`);
+      } else {
         const pcmBuffer = Buffer.from(base64Data, "base64");
         const wavBuffer = pcmToWav(pcmBuffer, 24000, 1, 16);
         const audioUrl = `data:audio/wav;base64,${wavBuffer.toString("base64")}`;
@@ -504,7 +824,6 @@ async function synthesizeSpeechWithGemini(
         err?.status === 429 ||
         errMsg.includes("429") ||
         errMsg.includes("RESOURCE_EXHAUSTED") ||
-        errMsg.includes("quota") ||
         errMsg.includes("Quota exceeded");
 
       const isHighDemand =
@@ -515,9 +834,9 @@ async function synthesizeSpeechWithGemini(
         errMsg.includes("Spikes in demand");
 
       if (isQuotaError) {
-        // Set cooldown for 60 seconds to prevent hammering the rate-limited endpoint
-        ttsQuotaCooldownUntil = Date.now() + 60000;
-        console.info(`[TTS Cooldown] Gemini TTS free-tier rate limit reached. Activating 60s cooldown. Fallback to client browser SpeechSynthesis.`);
+        // Set brief cooldown (25 seconds) to respect rate-limited endpoint
+        ttsQuotaCooldownUntil = Date.now() + 25000;
+        console.info(`[TTS Cooldown] Gemini TTS rate limit reached. Activating 25s cooldown.`);
         break; // Quota errors should not retry immediately
       } else if (isHighDemand) {
         console.info(`[TTS Notice] Gemini TTS experienced temporary high demand spike (503) on attempt ${attempt + 1}/${MAX_RETRIES + 1}.`);
@@ -545,20 +864,21 @@ app.post("/api/tts/synthesize", async (req, res) => {
     fullPromptPayload,
     isMultiSpeaker = false,
     speakerVoiceConfigs,
+    force = false,
   } = req.body;
 
   if (!text || typeof text !== "string") {
     return res.status(400).json({ error: "Missing required 'text' parameter" });
   }
 
-  // If Gemini TTS is in cooldown due to free-tier quota exhaustion, respond immediately with fallback instruction
-  if (Date.now() < ttsQuotaCooldownUntil) {
+  // If Gemini TTS is in cooldown due to rate limit and not forced, respond immediately with fallback instruction
+  if (!force && Date.now() < ttsQuotaCooldownUntil) {
     const cooldownRemaining = Math.max(1, Math.ceil((ttsQuotaCooldownUntil - Date.now()) / 1000));
     return res.json({
       fallbackToSpeechSynthesis: true,
       quotaExceeded: true,
       cooldownRemainingSeconds: cooldownRemaining,
-      message: "Gemini TTS daily quota limit reached. Using instant browser SpeechSynthesis engine.",
+      message: "Gemini TTS rate limit active. Using instant browser SpeechSynthesis engine.",
       voiceName: voiceName || "Fenrir",
     });
   }
@@ -579,7 +899,6 @@ app.post("/api/tts/synthesize", async (req, res) => {
       error?.status === 429 ||
       errMsg.includes("429") ||
       errMsg.includes("RESOURCE_EXHAUSTED") ||
-      errMsg.includes("quota") ||
       errMsg.includes("Quota exceeded");
 
     const isHighDemand =
@@ -591,13 +910,13 @@ app.post("/api/tts/synthesize", async (req, res) => {
       errMsg.includes("Spikes in demand");
 
     if (isQuotaError) {
-      ttsQuotaCooldownUntil = Date.now() + 60000;
+      ttsQuotaCooldownUntil = Date.now() + 25000;
       return res.json({
         fallbackToSpeechSynthesis: true,
         quotaExceeded: true,
         isHighDemand: false,
-        cooldownRemainingSeconds: 60,
-        message: "Gemini TTS free-tier quota limit reached. Using instant browser SpeechSynthesis engine.",
+        cooldownRemainingSeconds: 25,
+        message: "Gemini TTS rate limit reached. Using instant browser SpeechSynthesis engine.",
         voiceName: voiceName || "Fenrir",
       });
     }
@@ -642,6 +961,323 @@ app.post("/api/tts/reset-cooldown", (req, res) => {
   ttsQuotaCooldownUntil = 0;
   res.json({ success: true, message: "TTS quota cooldown reset." });
 });
+
+// ============================================================================
+// Section 7.3: Commissioner Audio Profile & Gemini TTS Prompt Guide Engine
+// Structured according to https://aistudio.google.com/learn/gemini-tts-prompt-guide-with-tags
+// ============================================================================
+
+export interface CommissionerTtsProfile {
+  id: string;
+  name: string;
+  title: string;
+  sceneTitle: string;
+  sceneDescription: string;
+  directorsNotes: {
+    style: string;
+    pace: string;
+    accent: string;
+  };
+  sampleContext: string;
+  transcript: string;
+  isMultiSpeaker: boolean;
+  speakerConfigs: Array<{
+    speaker: string;
+    voiceName: string;
+    roleContext: string;
+  }>;
+  isPreset?: boolean;
+  updatedAt?: string;
+}
+
+const DEFAULT_AUDIO_PROFILES: CommissionerTtsProfile[] = [
+  {
+    id: "profile-halsted-ivy",
+    name: "Halsted & Ivy Gridiron War Room",
+    title: "4th Quarter Confidence Sweat & Live Audit",
+    sceneTitle: "Vito & Sal's Broadcast Studio Booth",
+    sceneDescription: "Inside the laminate studio booth on 35th and Halsted in Chicago. Neon Old Style clock humming, smell of hot giardiniera and dipped au jus, CTA Orange Line rumbling outside.",
+    directorsNotes: {
+      style: "Enthusiastic, passionate sports radio debate between a gravelly veteran coach and an articulate MIT sports analyst.",
+      pace: "Rapid-fire, punchy tempo with dramatic pauses before key scoring lines and high-stakes point tallies.",
+      accent: "Authentic Chicago sports radio baritone paired with crisp articulate analytical delivery."
+    },
+    sampleContext: "Coach Sal: Gruff, passionate veteran Chicago sports radio host and gridiron diehard.\nDr. Chloe: Sharp, brilliant MIT Sloan sports analytics director armed with Expected Points Added models.",
+    transcript: "Coach Sal: [clears throat] Welcome back to the Initech Invitational war room! [shouting with passion] Josh Allen converts on fourth and goal with sixteen seconds remaining! [pause] That is twelve confidence points wiped off the board!\nDr. Chloe: [crisp analytical tone] Exactly Sal. [chuckles] A catastrophic 114 confidence points erased across eight manager cards tonight.",
+    isMultiSpeaker: true,
+    speakerConfigs: [
+      { speaker: "Coach Sal", voiceName: "Fenrir", roleContext: "Gruff, passionate veteran Chicago sports radio host" },
+      { speaker: "Dr. Chloe", voiceName: "Kore", roleContext: "Sharp, brilliant MIT Sloan sports analytics director" }
+    ],
+    isPreset: true
+  },
+  {
+    id: "profile-midnight-tavern",
+    name: "Midnight Tavern Post-Game Meltdown",
+    title: "The Sunday Night Carnage Debrief",
+    sceneTitle: "Halsted Street Corner Tap After Hours",
+    sceneDescription: "Dimly lit tavern counter covered in stained paper box scores, a flickering CRT television replaying the missed field goal, and half-empty draft mugs.",
+    directorsNotes: {
+      style: "Gravelly, emotional, raw sports talk host venting about heart-breaking upsets and ruined underdog survivor brackets.",
+      pace: "Urgent, escalating in intensity from brooding disappointment to explosive passionate outbursts.",
+      accent: "Gritty South-Side Chicago cadence with heavy emphasis on key words."
+    },
+    sampleContext: "Coach Sal: 61-year-old Bridgeport Chicago superfan and veteran gridiron radio host.",
+    transcript: "[sighs heavily] I am sitting here staring at the box score from Orchard Park, and my stomach is in knots! [groans] Ten managers had the Chiefs locked as their fourteen-point anchor! [pause] Gone! [shouting with passion] Vanished into thin air on a blown coverage!",
+    isMultiSpeaker: false,
+    speakerConfigs: [
+      { speaker: "Coach Sal", voiceName: "Fenrir", roleContext: "61-year-old Bridgeport Chicago superfan and veteran radio host" }
+    ],
+    isPreset: true
+  },
+  {
+    id: "profile-mit-sloan",
+    name: "MIT Sloan Quantitative Confidence Audit",
+    title: "Closing Line Value & Monte Carlo Expected Points",
+    sceneTitle: "Glass Analytics Lab at Kendall Square",
+    sceneDescription: "High-tech terminal room with multi-screen monitors displaying live closing line value delta charts, win probability curves, and Monte Carlo probability distributions.",
+    directorsNotes: {
+      style: "Crisp, precise, highly articulate quantitative delivery with razor-sharp analytical authority and subtle intellectual humor.",
+      pace: "Brisk, fluid, and mathematically confident without rushing.",
+      accent: "Clean, authoritative broadcast standard with sharp diction."
+    },
+    sampleContext: "Dr. Chloe: 28-year-old MIT Sloan sports analytics director and NextGen Stats consultant.",
+    transcript: "[crisp analytical tone] Let us examine the closing line value across Week One. [pause] The consensus pool made a fundamental game theory error by over-allocating eighty-two percent of aggregate confidence points to heavy road favorites. [chuckles] The resulting downside tail risk was catastrophic.",
+    isMultiSpeaker: false,
+    speakerConfigs: [
+      { speaker: "Dr. Chloe", voiceName: "Kore", roleContext: "28-year-old MIT Sloan sports analytics director" }
+    ],
+    isPreset: true
+  },
+  {
+    id: "profile-commish-ruling",
+    name: "Commissioner's High Table League Ruling",
+    title: "Official League Memorandum & Disciplinary Notice",
+    sceneTitle: "The High Table Boardroom, Initech Tower Suite 400",
+    sceneDescription: "Mahogany-paneled boardroom overlooking the city skyline, leather-bound league constitution open on the desk, bronze gavel resting on the ledger.",
+    directorsNotes: {
+      style: "Solemn, deadpan, deliberate executive authority with dry corporate humor and unwavering commissioner gravity.",
+      pace: "Measured, deliberate pacing with pregnant pauses between clauses.",
+      accent: "Deep, formal executive baritone."
+    },
+    sampleContext: "The Commish: Uncompromising, dry-witted league commissioner and custodian of the Initech Invitational constitution.",
+    transcript: "[clears throat] Official League Memorandum from the Office of the Commissioner. [pause] Notice to all franchise managers: the Sunday late slate kickoff lock has been executed with surgical precision. [deadpan] Any retroactive complaints regarding missed locks will be archived directly in the shredder.",
+    isMultiSpeaker: false,
+    speakerConfigs: [
+      { speaker: "The Commish", voiceName: "Puck", roleContext: "Dry-witted league commissioner and custodian of the constitution" }
+    ],
+    isPreset: true
+  },
+  {
+    id: "profile-texas-chalk",
+    name: "Texas Big-Chalk Tailgate",
+    title: "The Sunday Morning Smoker Session",
+    sceneTitle: "Parking Lot 4 Outside AT&T Stadium",
+    sceneDescription: "Open smoker billowing hickory wood smoke, cold beverage coolers iced down, country music guitar riffs bouncing off the concrete lot.",
+    directorsNotes: {
+      style: "Boisterous, warm, confident Southern drawl with hearty chuckles and big-time swagger.",
+      pace: "Laid-back, rolling cadence that kicks into high gear when talking about heavy home favorites.",
+      accent: "Rich Texas drawl with slow vowels and booming laughter."
+    },
+    sampleContext: "Rex 'The Big Ticket' Vance: Dallas oilman, avid tailgater, and unapologetic 16-point chalk bettor.",
+    transcript: "[boisterous laugh] Fire up the smoker boys, it is Sunday in Texas! [pause] You can keep your fancy spreadsheets and MIT computer calculations! [chuckles warmly] When the Cowboys are laying three and a hook at home, you slam sixteen points on the table and you do not look back!",
+    isMultiSpeaker: false,
+    speakerConfigs: [
+      { speaker: "Rex Vance", voiceName: "Charon", roleContext: "Dallas oilman, avid tailgater, and unapologetic 16-point chalk bettor" }
+    ],
+    isPreset: true
+  }
+];
+
+let activeAudioProfile: CommissionerTtsProfile = {
+  ...DEFAULT_AUDIO_PROFILES[0],
+  updatedAt: new Date().toISOString(),
+};
+
+export function formatPromptGuidePayload(profile: CommissionerTtsProfile): string {
+  const parts: string[] = [];
+  parts.push(`# AUDIO PROFILE: ${profile.name || "Custom Broadcast"}`);
+  parts.push(`## "${profile.title || "Broadcast Dispatch"}"\n`);
+  parts.push(`## THE SCENE: ${profile.sceneTitle || "Studio Booth"}`);
+  parts.push(`${profile.sceneDescription || ""}\n`);
+  parts.push(`### DIRECTOR'S NOTES`);
+  parts.push(`Style: ${profile.directorsNotes?.style || "Energetic sports radio"}`);
+  parts.push(`Pace: ${profile.directorsNotes?.pace || "Fast-paced with dramatic pauses"}`);
+  parts.push(`Accent: ${profile.directorsNotes?.accent || "Authentic sports talk inflection"}\n`);
+  parts.push(`### SAMPLE CONTEXT`);
+  parts.push(`${profile.sampleContext || ""}\n`);
+  parts.push(`#### TRANSCRIPT`);
+  parts.push(`${profile.transcript || ""}`);
+  return parts.join("\n");
+}
+
+const SUPPORTED_GEMINI_VOICES = [
+  { voiceName: "Fenrir", gender: "Male", tone: "Deep, gravelly, baritone (Coach Sal / Football Veteran)", recommendedFor: "Coach Sal, Big Guy, Hardcore host" },
+  { voiceName: "Kore", gender: "Female", tone: "Crisp, articulate, sharp, analytical (Dr. Chloe / Ivy League)", recommendedFor: "Dr. Chloe, Stats Lead, Precision Analyst" },
+  { voiceName: "Puck", gender: "Male", tone: "Authoritative, deadpan, steady, dry wit", recommendedFor: "The Commissioner, Rules Chairman, Senior Anchor" },
+  { voiceName: "Aoede", gender: "Female", tone: "Dynamic, passionate, punchy, high-energy", recommendedFor: "Sideline Reporter, RedZone Host, Fast-paced Debrief" },
+  { voiceName: "Charon", gender: "Male", tone: "Warm, hearty, resonant Southern drawl", recommendedFor: "Rex Vance, Tailgate Master, Chalk Bettor" },
+  { voiceName: "Zephyr", gender: "Female", tone: "Relaxed, conversational, friendly broadcast tone", recommendedFor: "Watercooler Co-Host, Community Moderator" },
+  { voiceName: "Leda", gender: "Female", tone: "Calm, composed, methodical, grounded", recommendedFor: "Audit Specialist, Constitution Custodian" },
+  { voiceName: "Orus", gender: "Male", tone: "Firm, punchy, classic sportscaster cadence", recommendedFor: "Play-by-play caller, Scoreboard ticker" }
+];
+
+const SUPPORTED_VOCAL_TAGS = [
+  { tag: "[pause]", label: "Pause", description: "Brief natural conversational pause" },
+  { tag: "[dramatic pause]", label: "Dramatic Pause", description: "Extended pregnant silence for suspense" },
+  { tag: "[clears throat]", label: "Clears Throat", description: "Gravelly throat clear to command attention" },
+  { tag: "[sighs]", label: "Sighs", description: "Audible exhale of exasperation or grief" },
+  { tag: "[groans]", label: "Groans", description: "Gut-wrenching reaction to bad variance or upset" },
+  { tag: "[shouting with passion]", label: "Shout Passion", description: "High-volume enthusiastic broadcast shout" },
+  { tag: "[boisterous laugh]", label: "Hearty Laugh", description: "Warm belly laugh or tavern chuckle" },
+  { tag: "[crisp analytical tone]", label: "Analytical Tone", description: "Razor-sharp, intellectual precision" },
+  { tag: "[whispering]", label: "Whisper", description: "Conspiratorial aside or locker room secret" },
+  { tag: "[deadpan]", label: "Deadpan", description: "Monotone commissioner dry delivery" },
+  { tag: "[fast paced]", label: "Fast Paced", description: "Rapid-fire tempo burst for urgency" },
+  { tag: "[emphasized]", label: "Emphasized", description: "Punches the following key words with weight" }
+];
+
+// Endpoint: Get Commissioner TTS Audio Profile & Presets
+app.get("/api/commissioner/tts-profile", (req, res) => {
+  const fullPromptPayload = formatPromptGuidePayload(activeAudioProfile);
+  res.json({
+    success: true,
+    activeProfile: activeAudioProfile,
+    formattedPayload: fullPromptPayload,
+    presets: DEFAULT_AUDIO_PROFILES,
+    supportedVoices: SUPPORTED_GEMINI_VOICES,
+    supportedVocalTags: SUPPORTED_VOCAL_TAGS,
+    currentModel: "gemini-3.1-flash-tts-preview"
+  });
+});
+
+// Endpoint: Save / Update Commissioner Active Audio Profile
+app.post("/api/commissioner/tts-profile", (req, res) => {
+  const { profile } = req.body || {};
+  if (!profile || typeof profile !== "object") {
+    return res.status(400).json({ error: "Missing or invalid profile object" });
+  }
+
+  activeAudioProfile = {
+    ...activeAudioProfile,
+    ...profile,
+    id: profile.id || `profile-custom-${Date.now()}`,
+    updatedAt: new Date().toISOString(),
+    isPreset: false
+  };
+
+  const formattedPayload = formatPromptGuidePayload(activeAudioProfile);
+  console.info(`[Commissioner] Updated active audio profile to: "${activeAudioProfile.name}"`);
+
+  res.json({
+    success: true,
+    message: `Active Audio Profile updated to: "${activeAudioProfile.name}"`,
+    activeProfile: activeAudioProfile,
+    formattedPayload
+  });
+});
+
+// Endpoint: Reset to Default Profile
+app.post("/api/commissioner/tts-profile/reset", (req, res) => {
+  activeAudioProfile = {
+    ...DEFAULT_AUDIO_PROFILES[0],
+    updatedAt: new Date().toISOString()
+  };
+  const formattedPayload = formatPromptGuidePayload(activeAudioProfile);
+
+  res.json({
+    success: true,
+    message: "Active Audio Profile reset to default Halsted & Ivy Gridiron War Room",
+    activeProfile: activeAudioProfile,
+    formattedPayload
+  });
+});
+
+// Endpoint: Synthesize Audio Preview using Prompt Guide Format
+app.post("/api/commissioner/tts-profile/preview", async (req, res) => {
+  const profile: CommissionerTtsProfile = req.body?.profile || activeAudioProfile;
+  const promptPayload = formatPromptGuidePayload(profile);
+  const isMulti = Boolean(profile.isMultiSpeaker && profile.speakerConfigs && profile.speakerConfigs.length >= 2);
+
+  // If multi-speaker, pass configs
+  const speakerVoiceConfigs = isMulti
+    ? profile.speakerConfigs.slice(0, 2).map(s => ({
+        speaker: s.speaker,
+        voiceName: s.voiceName || "Fenrir"
+      }))
+    : undefined;
+
+  const primaryVoice = profile.speakerConfigs?.[0]?.voiceName || "Fenrir";
+
+  try {
+    const result = await synthesizeSpeechWithGemini(
+      profile.transcript,
+      primaryVoice,
+      profile.directorsNotes.style,
+      {
+        characterPersona: profile.sampleContext,
+        sceneBackstory: profile.sceneDescription,
+        directorsNotes: `Style: ${profile.directorsNotes.style}. Pace: ${profile.directorsNotes.pace}. Accent: ${profile.directorsNotes.accent}.`,
+        fullPromptPayload: promptPayload,
+        isMultiSpeaker: isMulti,
+        speakerVoiceConfigs
+      }
+    );
+
+    res.json({
+      success: true,
+      audioUrl: result.audioUrl,
+      durationSeconds: result.durationSeconds,
+      voiceName: result.voiceName,
+      modelUsed: result.modelUsed,
+      cached: result.cached,
+      fullPromptPayload: promptPayload,
+      isMultiSpeaker: isMulti,
+      profileTitle: profile.title,
+      profileName: profile.name
+    });
+  } catch (error: any) {
+    const errMsg = error?.message || String(error);
+    const isQuotaError = error?.status === 429 || errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED");
+
+    if (isQuotaError) {
+      ttsQuotaCooldownUntil = Date.now() + 25000;
+    }
+
+    res.status(isQuotaError ? 429 : 500).json({
+      success: false,
+      error: errMsg,
+      isQuotaError,
+      fallbackToSpeechSynthesis: true,
+      fullPromptPayload: promptPayload,
+      transcript: profile.transcript,
+      voiceName: primaryVoice
+    });
+  }
+});
+
+// Endpoint: Commissioner League Governance Overview
+app.get("/api/commissioner/overview", (req, res) => {
+  res.json({
+    success: true,
+    leagueName: "The Initech Invitational",
+    commissioner: "The Commish (High Table)",
+    currentWeek: 1,
+    totalTeams: 10,
+    lockPolicy: "Strict Kickoff Lock (5-Window Staggered Enforcement)",
+    yahooLockWindowsCount: yahooLockWindows.length,
+    syncedWindowsCount: yahooLockWindows.filter(w => w.status === "synced").length,
+    autoSyncEnabled,
+    recentAuditLogs: syncAuditLogs.slice(0, 10),
+    activeAudioProfile: {
+      id: activeAudioProfile.id,
+      name: activeAudioProfile.name,
+      title: activeAudioProfile.title,
+      isMultiSpeaker: activeAudioProfile.isMultiSpeaker
+    }
+  });
+});
+
 
 // ============================================================================
 // Section 7.5: Audio Commentary Pre-Generation Service
@@ -843,8 +1479,8 @@ app.post("/api/audio/synthesize-briefing", async (req, res) => {
     });
   }
 
-  // If in cooldown, return fallback instruction
-  if (Date.now() < ttsQuotaCooldownUntil) {
+  // If in cooldown and not explicitly forced, return fallback instruction
+  if (!force && Date.now() < ttsQuotaCooldownUntil) {
     const cooldownRemaining = Math.max(1, Math.ceil((ttsQuotaCooldownUntil - Date.now()) / 1000));
     return res.json({
       success: true,
@@ -980,7 +1616,7 @@ const WEEKLY_RECAP_DATA = {
   duration: "02:12",
   durationSeconds: 132,
   headline: "Carnage at SoFi: Chalk Collapses, Underdogs Strike, & The Sleeping Giant Awakens",
-  writtenRecap: `What a brutal start to the Initech Invitational. Eleven out of twelve managers in Yahoo Group #13003 rode Matthew Stafford and the Rams minus-3.5, only to watch Kyle Shanahan's 49ers pull off a shocking road upset that incinerated 114 aggregate confidence points.
+  writtenRecap: `What a brutal start to the Initech Invitational. Eleven out of twelve managers in the league rode Matthew Stafford and the Rams minus-3.5, only to watch Kyle Shanahan's 49ers pull off a shocking road upset that incinerated 114 aggregate confidence points.
 
 Shoeman absorbed the most devastating blow of the night, forfeiting their #1 sixteen-point anchor. Meanwhile, Orange crush stands alone atop the leaderboard after boldly assigning 10 points to San Francisco (+10), pocketing 26 points. But don't sleep on Todd Reimer ('CramItUp Your CramHole Lafleur'): despite sitting in 8th place with 8 points, Todd preserved all seven top confidence anchors (LAC, JAX, DET, PHI, BAL, PIT, CIN), controlling 91 points on heavy favorites and holding the league's strongest Monte Carlo win equity going into Sunday.`,
   keyTakeaways: [
@@ -1009,11 +1645,11 @@ Shoeman absorbed the most devastating blow of the night, forfeiting their #1 six
     },
   ],
   scriptText:
-    "TTS the following conversation between Sal and Chloe:\nSal: [slaps laminate table] Good evening, Chicago gridiron faithful! Dis is Coach Sal comin' to ya live from Vito & Sal's Beef on 35th and Halsted! Wit' me, dissectin' da carnage from her MIT spreadsheet, is Dr. Chloe Vance! Chloe, did you see SoFi Stadium?! Eleven out of twelve managers in Yahoo Group thirteen-double-oh-three got taken behind da woodshed by San Francisco!\nChloe: [sips matcha latte] A catastrophic 114 confidence points vaporized, Sal. The entire pool rode the Rams minus 3.5, and Kyle Shanahan executed a defensive masterclass. Only Orange crush had the intestinal fortitude—or algorithmic luck—to assign 10 confidence points to the 49ers upset, catapulting them into sole possession of first place with 26 points.\nSal: An absolute beauty by Orange crush! But my heart breaks for Shoeman! Shoeman put his number one sixteen-point anchor right on da Rams! Boom! Down goes Frazier! His maximum season ceiling is clipped to one-twenty!\nChloe: And let's not overlook Niner Faithful, who suffered the ultimate cognitive dissonance: picked against his own 49ers for 11 points, watched San Francisco win, and forfeited 11 points. However, Sal, looking ahead at the remaining 14 games, the real story is Todd Reimer and 'CramItUp Your CramHole Lafleur'.\nSal: [chuckles warmly] Tell 'em, Chloe! People see Todd at eight points and think he's down! But Todd's playin' chess while dese guys are playin' checkers!\nChloe: Exactly. Todd absorbed a 9-point hit on the Rams, but preserved his top seven confidence anchors: 16 on the Chargers, 15 on the Jaguars, 14 on Detroit, 13 on Philly, 12 on Baltimore, 11 on Pittsburgh, and 10 on Cincy. That is 91 confidence points concentrated on heavy favorites. My Monte Carlo simulation gives Todd the single highest probability of capturing first place by Monday night.\nSal: That's what I'm talkin' about! Intangibles and discipline! Cash dem heavy anchors, ride da Chargers minus ten, and put double giardiniera on da victory beef! Let's get to Sunday!",
+    "Sal: [slaps laminate table] Good evening, Chicago gridiron faithful! Dis is Coach Sal comin' to ya live from Vito & Sal's Beef on 35th and Halsted! Wit' me, dissectin' da carnage from her MIT spreadsheet, is Dr. Chloe Vance! Chloe, did you see SoFi Stadium?! Eleven out of twelve managers in the league got taken behind da woodshed by San Francisco!\nChloe: [sips matcha latte] A catastrophic 114 confidence points vaporized, Sal. The entire pool rode the Rams minus 3.5, and Kyle Shanahan executed a defensive masterclass. Only Orange crush had the intestinal fortitude—or algorithmic luck—to assign 10 confidence points to the 49ers upset, catapulting them into sole possession of first place with 26 points.\nSal: An absolute beauty by Orange crush! But my heart breaks for Shoeman! Shoeman put his number one sixteen-point anchor right on da Rams! Boom! Down goes Frazier! His maximum season ceiling is clipped to one-twenty!\nChloe: And let's not overlook Niner Faithful, who suffered the ultimate cognitive dissonance: picked against his own 49ers for 11 points, watched San Francisco win, and forfeited 11 points. However, Sal, looking ahead at the remaining 14 games, the real story is Todd Reimer and 'CramItUp Your CramHole Lafleur'.\nSal: [chuckles warmly] Tell 'em, Chloe! People see Todd at eight points and think he's down! But Todd's playin' chess while dese guys are playin' checkers!\nChloe: Exactly. Todd absorbed a 9-point hit on the Rams, but preserved his top seven confidence anchors: 16 on the Chargers, 15 on the Jaguars, 14 on Detroit, 13 on Philly, 12 on Baltimore, 11 on Pittsburgh, and 10 on Cincy. That is 91 confidence points concentrated on heavy favorites. My Monte Carlo simulation gives Todd the single highest probability of capturing first place by Monday night.\nSal: That's what I'm talkin' about! Intangibles and discipline! Cash dem heavy anchors, ride da Chargers minus ten, and put double giardiniera on da victory beef! Let's get to Sunday!",
   dialogueTurns: [
     {
       speaker: "Sal",
-      text: "[slaps laminate table] Good evening, Chicago gridiron faithful! Dis is Coach Sal comin' to ya live from Vito & Sal's Beef on 35th and Halsted! Wit' me, dissectin' da carnage from her MIT spreadsheet, is Dr. Chloe Vance! Chloe, did you see SoFi Stadium?! Eleven out of twelve managers in Yahoo Group thirteen-double-oh-three got taken behind da woodshed by San Francisco!",
+      text: "[slaps laminate table] Good evening, Chicago gridiron faithful! Dis is Coach Sal comin' to ya live from Vito & Sal's Beef on 35th and Halsted! Wit' me, dissectin' da carnage from her MIT spreadsheet, is Dr. Chloe Vance! Chloe, did you see SoFi Stadium?! Eleven out of twelve managers in the league got taken behind da woodshed by San Francisco!",
       stageDirection: "slaps table, booming Ditka gravelly baritone",
     },
     {
@@ -1096,7 +1732,8 @@ app.get("/api/audio/weekly-recap", (req, res) => {
 
 // Endpoint: Explicitly synthesize / regenerate the weekly recap with Gemini TTS
 app.post("/api/audio/weekly-recap/synthesize", async (req, res) => {
-  if (weeklyRecapAudioCache.hasNeuralAudio && weeklyRecapAudioCache.audioUrl && !req.body.force) {
+  const force = Boolean(req.body?.force);
+  if (weeklyRecapAudioCache.hasNeuralAudio && weeklyRecapAudioCache.audioUrl && !force) {
     return res.json({
       success: true,
       cached: true,
@@ -1107,8 +1744,8 @@ app.post("/api/audio/weekly-recap/synthesize", async (req, res) => {
     });
   }
 
-  // Check cooldown
-  if (Date.now() < ttsQuotaCooldownUntil) {
+  // Check cooldown if not forced
+  if (!force && Date.now() < ttsQuotaCooldownUntil) {
     const cooldownRemaining = Math.max(1, Math.ceil((ttsQuotaCooldownUntil - Date.now()) / 1000));
     return res.json({
       success: true,
@@ -1245,32 +1882,32 @@ app.post("/api/broadcast/generate", async (req, res) => {
 
   const activeCadence = cadencePrompt || stylePrompt || debateCadence || "Fast-paced, heated sports talk show debate";
 
-  // Fallback multi-speaker talk show dialogue matched to archetype
+  // Fallback multi-speaker talk show dialogue matched to archetype with pure vocal tags for Gemini Flash TTS
   let fallbackDialogueTurns = [
     {
       speaker: speaker1Meta.name,
-      text: `[slaps laminate table] Good morning, Chicago! Dis is Coach Sal comin' to ya live from Vito & Sal's Beef on 35th and Halsted! Wit' me as always, lookin' down her nose from an MIT spreadsheet, is Dr. Chloe Vance! Chloe, did you see ${chaser}'s disaster on ${sweatGame}?!`,
-      stageDirection: "slaps laminate table, speaks in booming Ditka gravelly baritone",
+      text: `[clears throat] [booming Ditka baritone] Good morning, Chicago! Dis is Coach Sal comin' to ya live from Vito & Sal's Beef on 35th and Halsted! Wit' me as always, lookin' down her nose from an MIT spreadsheet, is Dr. Chloe Vance! Chloe, did you see ${chaser}'s disaster on ${sweatGame}?!`,
+      stageDirection: "clears throat, speaks in booming Ditka gravelly baritone",
     },
     {
       speaker: speaker2Meta.name,
-      text: "[sips matcha latte] Good morning, Sal. And yes, my win-probability model plummeted by 84.6% the exact second Josh Allen forced that ball into triple coverage. It was an unmitigated regression catastrophe.",
-      stageDirection: "sips matcha, crisp, sharp, fast analytical cadence",
+      text: "[crisp analytical tone] [fast paced] Good morning, Sal. And yes, my win-probability model plummeted by 84.6% the exact second Josh Allen forced that ball into triple coverage. It was an unmitigated regression catastrophe.",
+      stageDirection: "crisp, sharp, fast analytical cadence",
     },
     {
       speaker: speaker1Meta.name,
-      text: "Regression catastrophe my hind leg! It was bad play callin'! Two yards out, seventy-eight seconds on da clock! You hand da rock to your fullback and you push da pile! Mike Ditka is rollin' over in his sweater vest hearin' you talk about regressions!",
+      text: "[scoffs in disgust] [shouting with passion] Regression catastrophe my hind leg! [pause] It was bad play callin'! Two yards out, seventy-eight seconds on da clock! You hand da rock to your fullback and you push da pile! Mike Ditka is rollin' over in his sweater vest hearin' you talk about regressions!",
       stageDirection: "scoffs in disgust, shouts passionately, clears throat",
     },
     {
       speaker: speaker2Meta.name,
-      text: `Sal, the expected points added on an inside run against that goal-line box was negative 0.4. But congratulations to ${winner} for executing textbook game-theory leverage on ${sweatGame}.`,
+      text: `[authoritative] [smirks] Sal, the expected points added on an inside run against that goal-line box was negative 0.4. But congratulations to ${winner} for executing textbook game-theory leverage on ${sweatGame}.`,
       stageDirection: "authoritative and confident, slight smirk",
     },
     {
       speaker: speaker1Meta.name,
-      text: `Intangibles, Chloe! ${winner} has got ice in his veins and spicy giardiniera on his breath! Todd takes da whole pot! ${chaser}, you're on mop duty at da beef stand!`,
-      stageDirection: "hearty belly laugh, counter slap",
+      text: `[boisterous laugh] [chuckles] Intangibles, Chloe! ${winner} has got ice in his veins and spicy giardiniera on his breath! Todd takes da whole pot! ${chaser}, you're on mop duty at da beef stand!`,
+      stageDirection: "hearty belly laugh, triumph",
     },
   ];
 
@@ -1278,55 +1915,55 @@ app.post("/api/broadcast/generate", async (req, res) => {
     fallbackDialogueTurns = [
       {
         speaker: speaker1Meta.name,
-        text: `[slaps laminate table] Turn off da phone lines! Dis is Coach Sal at Vito & Sal's Beef! Kev Callahan, put down da espresso and look at what happened to ${chaser} in ${sweatGame}!`,
-        stageDirection: "slaps laminate table, speaks in booming Ditka baritone",
+        text: `[clears throat] [booming Ditka baritone] Turn off da phone lines! Dis is Coach Sal at Vito & Sal's Beef! Kev Callahan, put down da espresso and look at what happened to ${chaser} in ${sweatGame}!`,
+        stageDirection: "speaks in booming Ditka baritone",
       },
       {
         speaker: speaker2Meta.name,
-        text: `[screams into microphone] Sal, I am in physical pain! I had maximum confidence points on that game! Maximum! Fire the offensive coordinator into the sun right now!`,
-        stageDirection: "furious AM radio screech, papers rustling wildly",
+        text: `[shouting furiously] [screams in disbelief] Sal, I am in physical pain! [groans in agony] I had maximum confidence points on that game! Maximum! Fire the offensive coordinator into the sun right now!`,
+        stageDirection: "furious AM radio screech, panicked breath",
       },
       {
         speaker: speaker1Meta.name,
-        text: `Take a blood pressure pill, Kev! You put heavy confidence on a squad that can't punch it in from the two-yard line! Meanwhile ${winner} played optimal leverage and took da entire Yahoo #13003 pool!`,
-        stageDirection: "hearty belly laugh, pours a glass of water",
+        text: `[chuckles] [pause] Take a blood pressure pill, Kev! You put heavy confidence on a squad that can't punch it in from the two-yard line! Meanwhile ${winner} played optimal leverage and took da entire league pool!`,
+        stageDirection: "hearty belly laugh, reassuring tone",
       },
       {
         speaker: speaker2Meta.name,
-        text: `[pounds desk] Don't talk to me about leverage, Sal! That was a phantom holding call! I haven't slept in thirty-six hours! My bookie is texting me right now!`,
-        stageDirection: "groans in agony, slamming phone receiver",
+        text: `[groans in disgust] [shouting with passion] Don't talk to me about leverage, Sal! That was a phantom holding call! [dramatic pause] I haven't slept in thirty-six hours! My bookie is texting me right now!`,
+        stageDirection: "groans in agony, exasperated",
       },
       {
         speaker: speaker1Meta.name,
-        text: `Dat's why you don't chase chalk, Kev! Grab an Italian beef dipped wit' hot giardiniera and crown ${winner} the King of Week ${weekNumber}!`,
-        stageDirection: "counter slap, triumphant chuckle",
+        text: `[boisterous laugh] Dat's why you don't chase chalk, Kev! Grab an Italian beef dipped wit' hot giardiniera and crown ${winner} the King of Week ${weekNumber}!`,
+        stageDirection: "triumphant chuckle, cheerful Ditka cadence",
       },
     ];
   } else if (cohostArchetype === "rex") {
     fallbackDialogueTurns = [
       {
         speaker: speaker1Meta.name,
-        text: `[slaps laminate table] Good morning Chicago! Coach Sal here wit' our Texas booster Rex McCoy! Rex, what did I tell ya about fancy spread offenses?!`,
-        stageDirection: "chuckles in Ditka baritone, wipes counter",
+        text: `[clears throat] [booming Ditka baritone] Good morning Chicago! Coach Sal here wit' our Texas booster Rex McCoy! Rex, what did I tell ya about fancy spread offenses?!`,
+        stageDirection: "chuckles in Ditka baritone",
       },
       {
         speaker: speaker2Meta.name,
-        text: `[adjusts 10-gallon hat] Well hold on now Sal! If your quarterback can't sling a strawberry through a battleship from 50 yards out, you don't deserve the win! ${chaser} trusted a pop-gun offense!`,
-        stageDirection: "boisterous Texas drawl, adjusts giant belt buckle",
+        text: `[boisterous Texas drawl] [chuckles warmly] Well hold on now Sal! If your quarterback can't sling a strawberry through a battleship from 50 yards out, you don't deserve the win! ${chaser} trusted a pop-gun offense!`,
+        stageDirection: "boisterous Texas drawl",
       },
       {
         speaker: speaker1Meta.name,
-        text: `Gunslinger nonsense, Rex! It's about fullbacks and slobberknocker goal-line defense! ${winner} understood dat, and now Todd is sittin' pretty in first place in Group #13003!`,
-        stageDirection: "slaps table with vigor",
+        text: `[scoffs in disgust] [shouting with passion] Gunslinger nonsense, Rex! It's about fullbacks and slobberknocker goal-line defense! ${winner} understood dat, and now Todd is sittin' pretty in first place in the Initech Invitational!`,
+        stageDirection: "authoritative and fiery",
       },
       {
         speaker: speaker2Meta.name,
-        text: `[spits toothpick, chuckles] Can't argue with first place, partner! ${winner} rode that stallion straight to the winner's circle, while ${chaser} got bucked off at the two-yard line!`,
-        stageDirection: "hearty belly laugh, tips hat",
+        text: `[chuckles] [boisterous belly laugh] Can't argue with first place, partner! ${winner} rode that stallion straight to the winner's circle, while ${chaser} got bucked off at the two-yard line!`,
+        stageDirection: "hearty belly laugh",
       },
       {
         speaker: speaker1Meta.name,
-        text: `Bears football baby! Order up two combos and pass da trophy to ${winner}!`,
+        text: `[boisterous laugh] Bears football baby! Order up two combos and pass da trophy to ${winner}!`,
         stageDirection: "roars with laughter",
       },
     ];
@@ -1336,7 +1973,7 @@ app.post("/api/broadcast/generate", async (req, res) => {
     .map((turn) => `${turn.speaker}: ${turn.text}`)
     .join("\n")}`;
 
-  const fallbackFullPromptPayload = `TTS the following conversation between ${speaker1Meta.name} and ${speaker2Meta.name}. ${DEFAULT_CHICAGO_DIRECTORS_NOTES} Scene Setting: ${DEFAULT_CHICAGO_SCENE}.\n\n${fallbackTtsPromptText}`;
+  const fallbackFullPromptPayload = `TTS the following conversation between ${speaker1Meta.name} and ${speaker2Meta.name}. ${DEFAULT_CHICAGO_DIRECTORS_NOTES}\n\n${fallbackTtsPromptText}`;
 
   try {
     const ai = getGeminiClient();
@@ -1375,7 +2012,7 @@ Debate Cadence & Style Direction:
 "${activeCadence}"
 
 Recap context for Week ${weekNumber} (End-of-Day Gridiron Breakdown):
-- League: Yahoo Pro Football Pick'em (Group #13003)
+- League: The Initech Invitational
 - Completed Games Settled:
   * Game 1: Seattle Seahawks (-3.5) def. Patriots (26-20). Consensus chalk hit: all 12 pool managers cashed.
   * Game 2: San Francisco 49ers (+3.5) UPSET LA Rams (17-13). Catastrophic bloodbath at SoFi: 11 of 12 pool managers lost on the Rams, vaporizing 114 total confidence points!
@@ -1393,11 +2030,19 @@ Crucial requirements:
 - The script MUST distinctly reflect the persona of ${speaker2Meta.name} (${speaker2Meta.title}) and the specified Debate Cadence ("${activeCadence}").
 - Each line MUST start with "${speaker1Meta.name}: " or "${speaker2Meta.name}: ".
 - Alternate turns between ${speaker1Meta.name} and ${speaker2Meta.name} (5 turns total).
-- Include bracketed audio cues and physical reactions tailored to their archetype:
-  * For Sal: [slaps laminate table], [chews giardiniera], [scoffs loudly], [chuckles in Ditka baritone]
-  * For Chloe (if host): [sips matcha latte], [rapid keystrokes], [smirks coolly]
-  * For Kev (if host): [screams into microphone], [papers rustling wildly], [pounds the desk in fury], [groans in agony]
-  * For Rex (if host): [adjusts 10-gallon hat], [boisterous belly laugh], [spits toothpick], [twangs in Texas drawl]
+- CRITICAL FLASH TTS BRACKET AUDIO TAG RULES:
+  Gemini Flash TTS interprets bracketed tags directly for audio modulation.
+  DO NOT include physical stage directions (e.g. NEVER write [slams fist on table], [slaps desk], [pounds desk], [spits toothpick], [adjusts hat]).
+  Instead, all bracketed tags MUST strictly control:
+  1. Vocal tone & delivery for the sentence or phrase: [shouting with passion], [whispers], [gravelly baritone], [boisterous], [sarcastic], [deadpan], [excited], [disappointed], [fast paced], [slowly]
+  2. Pauses & pacing: [pause], [dramatic pause], [short pause]
+  3. Word emphasis: [emphasized]
+  4. Vocal sound effects: [sighs], [moans], [groans], [clears throat], [chuckles], [boisterous laugh], [coughs], [gasp], [fart noise]
+  Examples tailored to their archetypes:
+  * For Sal: [clears throat], [booming coach shout], [chuckles in gravelly baritone], [groans in disgust], [pause], [sighs loudly]
+  * For Chloe: [crisp analytical tone], [fast paced], [authoritative], [smirks], [deadpan]
+  * For Kev: [shouting furiously], [screams in disbelief], [hyperventilating], [groans in agony], [dramatic pause]
+  * For Rex: [boisterous Texas drawl], [hearty belly laugh], [chuckles warmly], [emphasized]
 
 Return ONLY valid JSON matching this schema:
 {
@@ -1414,7 +2059,7 @@ Return ONLY valid JSON matching this schema:
   "scene_backstory": "Corner laminate booth at Vito & Sal's Italian Beef on 35th & Halsted, Chicago. Steam hissing off the au jus vat, neon Old Style clock buzzing.",
   "directors_notes": "Director's Note: ${activeCadence}. Sal is ${speaker1Meta.name} (${speaker1Meta.voiceName}). Co-host is ${speaker2Meta.name} (${speaker2Meta.voiceName}).",
   "key_stats": [
-    "Todd gained +${margin || 14} net leverage points in Group #13003",
+    "Todd gained +${margin || 14} net leverage points in the league",
     "Dave dropped points on ${sweatGame} top confidence lock"
   ]
 }`;
@@ -1431,16 +2076,20 @@ Return ONLY valid JSON matching this schema:
     const parsed = JSON.parse(response.text?.trim() || "{}");
 
     const turns: Array<{ speaker: string; text: string; stageDirection?: string }> =
-      Array.isArray(parsed.dialogue_turns) && parsed.dialogue_turns.length > 0
+      (Array.isArray(parsed.dialogue_turns) && parsed.dialogue_turns.length > 0
         ? parsed.dialogue_turns
-        : fallbackDialogueTurns;
+        : fallbackDialogueTurns
+      ).map((t: any) => ({
+        ...t,
+        text: normalizeTtsBracketTags(t.text || ""),
+      }));
 
     // Build the exact Gemini TTS multi-speaker prompt string
     const conversationScript = `TTS the following conversation between ${speaker1Meta.name} and ${speaker2Meta.name}:\n${turns
       .map((t) => `${t.speaker}: ${t.text}`)
       .join("\n")}`;
 
-    const fullPromptPayload = `TTS the following conversation between ${speaker1Meta.name} and ${speaker2Meta.name}. ${parsed.directors_notes || DEFAULT_CHICAGO_DIRECTORS_NOTES} Scene: ${parsed.scene_backstory || DEFAULT_CHICAGO_SCENE}.\n\n${conversationScript}`;
+    const fullPromptPayload = `TTS the following conversation between ${speaker1Meta.name} and ${speaker2Meta.name}. ${parsed.directors_notes || DEFAULT_CHICAGO_DIRECTORS_NOTES}\n\n${conversationScript}`;
 
     parsed.show_title = parsed.show_title || "Halsted & Ivy: The Gridiron Dispute";
     parsed.is_multi_speaker = true;
@@ -1625,7 +2274,7 @@ app.post("/api/broadcast/commentary", async (req, res) => {
         {
           speaker: "Dr. Chloe Vance",
           stageDirection: "adjusting glasses and pulling up leverage curves",
-          text: `Looking at the holistic slate, the entire Yahoo #13003 pool suffered massive drawdown with consensus chalk falling in multiple key games. Your point efficiency of ${weekRecord.confidenceEfficiency}% kept you within striking distance of the money bubble. The key now is recalibrating your mid-range weights (7-11 points).`,
+          text: `Looking at the holistic slate, the entire league pool suffered massive drawdown with consensus chalk falling in multiple key games. Your point efficiency of ${weekRecord.confidenceEfficiency}% kept you within striking distance of the money bubble. The key now is recalibrating your mid-range weights (7-11 points).`,
         },
         {
           speaker: "Coach Sal",
@@ -1683,7 +2332,7 @@ app.post("/api/broadcast/commentary", async (req, res) => {
       keyHighlights: [
         `${weekRecord.correctCount} wins / ${weekRecord.gamesCount - weekRecord.correctCount} losses (${weekRecord.accuracy}% straight-up)`,
         `${weekRecord.pointsEarned} points secured (Rank #${weekRecord.weeklyRank} for the week)`,
-        `${diff >= 0 ? "+" : ""}${diff}% differential against Yahoo #13003 pool median (${leagueWeekAvg}%)`,
+        `${diff >= 0 ? "+" : ""}${diff}% differential against league pool median (${leagueWeekAvg}%)`,
       ],
       salQuote: isAnchorSafe
         ? "Dat's how we run a football franchise! Pure Chicago grit and no cute nonsense!"
@@ -1712,7 +2361,7 @@ app.post("/api/broadcast/commentary", async (req, res) => {
         : persona === "chloe"
         ? `Focus strictly on Dr. Chloe "The Algorithm" Vance (28-yr-old MIT Sloan sports analytics director, NextGen Stats consultant, sharp, articulate, citing EPA, Monte Carlo clinch odds, Bayesian leverage, Nash equilibrium).`
         : persona === "commish"
-        ? `Focus strictly on The Commish AI (Bot) (stern, dry, mathematical referee of Yahoo Pick'em Group #13003, citing league rules, pool standings, and official rulings).`
+        ? `Focus strictly on The Commish AI (Bot) (stern, dry, mathematical referee of the Initech Invitational, citing league rules, pool standings, and official rulings).`
         : `Include dialogue exchange between Coach Sal Ditkofsky AND Dr. Chloe Vance. They banter back and forth—Sal brings fiery Chicago grit and gut instincts, while Chloe counters with quantitative Expected Value and Game Theory.`;
 
     const focusModeGuidance =
@@ -1722,7 +2371,7 @@ app.post("/api/broadcast/commentary", async (req, res) => {
         ? "Focus intensely on the high-confidence 13 to 16 point anchor games—did they protect their most valuable capital or burn it on dangerous chalk?"
         : "Provide a complete post-slate radio broadcast recap covering wins, losses, anchor survival, and strategy effectiveness.";
 
-    const prompt = `You are the executive producer and on-air broadcast talent for "The Initech Invitational: Yahoo Pick'em #13003 Post-Game Broadcast".
+    const prompt = `You are the executive producer and on-air broadcast talent for "The Initech Invitational Post-Game Broadcast".
 
 Analyze this manager's weekly performance and strategy effectiveness:
 - Manager: "${teamAccuracyData.ownerName}" (Franchise: "${teamAccuracyData.teamName}")
@@ -1899,7 +2548,7 @@ app.post("/api/coach/ask-advice", async (req, res) => {
   const buildFallbackAdvice = () => {
     const qLower = (question || "").toLowerCase();
     let headline = "COACH SAL'S CHALK TALK: DISCIPLINE WINS THE INITECH INVITATIONAL!";
-    let verbalAdvice = `[slaps laminate table at Vito & Sal's, hot giardiniera flying] Listen to me, ${ownerName}! You're sittin' at Rank #${currentRank}, and you're lookin' for the magic pill. Let me tell ya what wins in this league: IT'S NOT BEING CUTE! It's the trenches! You protect your big four hammers—the 13, 14, 15, and 16-point buckets—like they're the last beef sandwiches in Bridgeport! You only put double-digit confidence on teams that control both sides of the line of scrimmage, win the turnover battle, and don't turn the football over in their own territory. You leave the 1 and 2-point scrap heap for the coin-flip road dogs. That's how we climb to number one!`;
+    let verbalAdvice = `[clears throat] [booming Ditka baritone] Listen to me, ${ownerName}! You're sittin' at Rank #${currentRank}, and you're lookin' for the magic pill. Let me tell ya what wins in this league: [shouting with passion] IT'S NOT BEING CUTE! [pause] It's the trenches! You protect your big four hammers—the 13, 14, 15, and 16-point buckets—like they're the last beef sandwiches in Bridgeport! You only put double-digit confidence on teams that control both sides of the line of scrimmage, win the turnover battle, and don't turn the football over in their own territory. You leave the 1 and 2-point scrap heap for the coin-flip road dogs. [chuckles] That's how we climb to number one!`;
     let bulletPoints = [
       "Rule 1 (The Iron Anchor): Put your 14, 15, and 16 points exclusively on home favorites with dominant offensive line run-block win rates.",
       "Rule 2 (The Thursday Night Quarantine): Never assign more than 5 confidence points to Thursday night games—short rest creates erratic turnover variance.",
@@ -1931,25 +2580,25 @@ app.post("/api/coach/ask-advice", async (req, res) => {
 
     if (qLower.includes("chase") || qLower.includes("leader") || qLower.includes("catch") || qLower.includes("underdog")) {
       headline = "COACH SAL'S CHASE PROTOCOL: SURGICAL PIVOTS, NOT SUICIDE MISSIONS!";
-      verbalAdvice = `[points cigar firmly at the chalkboard] You wanna catch the leader, ${ownerName}? You don't do it by pickin' eight underdogs and throwing your season into Lake Michigan! That's amateur hour! You look for THE ONE GAME where the public is completely drunk on a hype train. When 85% of Yahoo is on a 3.5-point favorite, that's where you drop a 7-point pivot on the underdog! If it hits, you gain 14 net points on the whole field in one swing!`;
+      verbalAdvice = `[clears throat] [emphasized] You wanna catch the leader, ${ownerName}? [shouting with passion] You don't do it by pickin' eight underdogs and throwing your season into Lake Michigan! That's amateur hour! [pause] You look for THE ONE GAME where the public is completely drunk on a hype train. When 85% of Yahoo is on a 3.5-point favorite, that's where you drop a 7-point pivot on the underdog! If it hits, you gain 14 net points on the whole field in one swing!`;
       goldenRule = "One well-placed 7-point dagger beats six reckless 1-point prayer picks every single time.";
     } else if (qLower.includes("anchor") || qLower.includes("14") || qLower.includes("16") || qLower.includes("heavy")) {
       headline = "COACH SAL'S ANCHOR DEFENSE: LOCK UP FORT KNOX!";
-      verbalAdvice = `[leans in with ferocious focus] Look at me! Your 13, 14, 15, and 16-pointers are worth 58 total points! That's almost half your entire week! You do NOT give those points to rookie quarterbacks on the road! You give them to veteran signal callers with top-five defensive pass rushes. When you hit 4-for-4 on anchors, you cannot have a bad week in this pool!`;
+      verbalAdvice = `[shouting with passion] [pause] Look at me! Your 13, 14, 15, and 16-pointers are worth 58 total points! That's almost half your entire week! You do NOT give those points to rookie quarterbacks on the road! You give them to veteran signal callers with top-five defensive pass rushes. When you hit 4-for-4 on anchors, you cannot have a bad week in this pool!`;
       goldenRule = "Your anchors aren't for gambling; they're for collecting interest. Protect them with your life.";
     } else if (qLower.includes("thursday") || qLower.includes("monday") || qLower.includes("mnf")) {
       headline = "COACH SAL'S PRIMETIME RULE: QUARANTINE THURSDAY, WEAPONIZE MONDAY!";
-      verbalAdvice = `[adjusts headset with a scowl] Thursday night football is sloppy football, period! Guys didn't even heal from Sunday! Keep your Thursday pick under 4 points. But Monday night? That's your closer! Keep 7 or 8 points on Monday night so when Sunday wraps up, you know EXACTLY what you need to take home the weekly prize!`;
+      verbalAdvice = `[groans in disgust] [pause] Thursday night football is sloppy football, period! Guys didn't even heal from Sunday! Keep your Thursday pick under 4 points. But Monday night? That's your closer! Keep 7 or 8 points on Monday night so when Sunday wraps up, you know EXACTLY what you need to take home the weekly prize!`;
       goldenRule = "Thursday is a minefield; Monday is your scalpel.";
     }
 
     if (coach === "chloe") {
       headline = `DR. CHLOE VANCE: BAYESIAN PORTFOLIO OPTIMIZATION`;
-      verbalAdvice = `[tapping stylus against Monte Carlo simulation chart] Looking at the variance matrix for ${teamName}, your priority is maximizing Closing Line Value (CLV). In Yahoo Pick'em Group #13003, the median participant overweights public favorites by 12.8%. By aligning your highest confidence buckets with Vegas consensus models rather than public sentiment, you generate an asymmetric risk-reward curve that outperforms the field over an 18-week sample.`;
+      verbalAdvice = `[crisp analytical tone] [fast paced] Looking at the variance matrix for ${teamName}, your priority is maximizing Closing Line Value (CLV). In the Initech Invitational, the median participant overweights public favorites by 12.8%. By aligning your highest confidence buckets with Vegas consensus models rather than public sentiment, you generate an asymmetric risk-reward curve that outperforms the field over an 18-week sample.`;
       goldenRule = "Eliminate uncompensated variance: weight games strictly by modeled win probability delta.";
     } else if (coach === "commish") {
-      headline = `THE COMMISH AI: OFFICIAL LEAGUE #13003 DIRECTIVE`;
-      verbalAdvice = `[gavel strikes official league ledger] Commissioner Audit for ${ownerName}: All picks lock strictly at scheduled kickoff. To maximize your clinch index and prevent elimination from weekly high-score payouts, maintain strict confidence tier separation. Dispersing high confidence uniformly across uncertain matchups statistically accelerates elimination.`;
+      headline = `THE COMMISH AI: OFFICIAL INITECH INVITATIONAL DIRECTIVE`;
+      verbalAdvice = `[deadpan monotone] [pause] Commissioner Audit for ${ownerName}: All picks lock strictly at scheduled kickoff. To maximize your clinch index and prevent elimination from weekly high-score payouts, maintain strict confidence tier separation. Dispersing high confidence uniformly across uncertain matchups statistically accelerates elimination.`;
       goldenRule = "Standings reward disciplined capital preservation; rash speculation guarantees a mid-table finish.";
     }
 
@@ -1987,15 +2636,15 @@ app.post("/api/coach/ask-advice", async (req, res) => {
       coach === "chloe"
         ? `You are Dr. Chloe "The Algorithm" Vance, 28-yr-old MIT Sloan sports analytics director. High-speed, articulate, data scientist. Focus on Expected Points Added (EPA), Bayesian win probability, closing line value (CLV), confidence point efficiency, and Game Theory Optimal (GTO) play.`
         : coach === "commish"
-        ? `You are The Commish AI, the stern, dry mathematical referee and commissioner of Yahoo Pick'em Group #13003. Cite pool rules, standings implications, tiebreaker math, and point protection.`
-        : `You are Coach Sal "Da Bear" Ditkofsky, 61-yr-old Bridgeport Chicago hot-head, 1985 Bears superfan, South-Side beef stand owner. Ditka accent ("dis", "dat", "dem", "da Bears"), table slaps, unlit cigar, tough love, blunt accountability. Focus on line of scrimmage dominance, turnover differential, avoiding cute hedges, and protecting heavy 14-16 point anchor games.`;
+        ? `You are The Commish AI, the stern, dry mathematical referee and commissioner of the Initech Invitational. Cite pool rules, standings implications, tiebreaker math, and point protection.`
+        : `You are Coach Sal "Da Bear" Ditkofsky, 61-yr-old Bridgeport Chicago hot-head, 1985 Bears superfan, South-Side beef stand owner. Ditka accent ("dis", "dat", "dem", "da Bears"), throat clears, sudden explosive disbelief, dramatic pauses, tough love, blunt accountability. Focus on line of scrimmage dominance, turnover differential, avoiding cute hedges, and protecting heavy 14-16 point anchor games.`;
 
-    const prompt = `You are providing on-air tactical pick advice and strategic football analysis for a manager in "The Initech Invitational: Yahoo Pick'em #13003" confidence pool.
+    const prompt = `You are providing on-air tactical pick advice and strategic football analysis for a manager in "The Initech Invitational" confidence pool.
 
 User's Question: "${question}"
 Manager Name: "${ownerName}"
 Team Name: "${teamName}"
-Current League Standing: Rank #${currentRank} out of 10 managers in Group #13003
+Current League Standing: Rank #${currentRank} out of 10 managers in the league
 Week Number: Week ${weekNumber}
 
 Persona Guidelines:
@@ -2005,7 +2654,7 @@ Provide concrete, actionable advice on how to make picks, allocate confidence po
 Output JSON strictly conforming to this schema:
 {
   "headline": "Punchy all-caps coaching headline",
-  "verbalAdvice": "Detailed direct spoken response (130-180 words) with expressive stage directions in brackets like [slaps desk], [points finger], [adjusts glasses]. Highly engaging and actionable.",
+  "verbalAdvice": "Detailed direct spoken response (130-180 words) formatted for Gemini Flash TTS. Use audio-focused bracketed tags to control vocal tone, word emphasis, pauses, and vocal sound effects (e.g. [whispers], [shouting], [sighs], [moans], [groans], [clears throat], [chuckle], [pause], [emphasized], [fast paced], [fart noise]). NEVER include physical stage directions like [slaps desk] or [adjusts glasses] as they ruin audio generation.",
   "bulletPoints": [
     "Rule 1: ...",
     "Rule 2: ...",
@@ -2094,7 +2743,7 @@ Output JSON strictly conforming to this schema:
       currentRank,
       question,
       headline: parsed.headline || fallbackData.headline,
-      verbalAdvice: parsed.verbalAdvice || fallbackData.verbalAdvice,
+      verbalAdvice: normalizeTtsBracketTags(parsed.verbalAdvice || fallbackData.verbalAdvice),
       bulletPoints: Array.isArray(parsed.bulletPoints) && parsed.bulletPoints.length > 0 ? parsed.bulletPoints : fallbackData.bulletPoints,
       goldenRule: parsed.goldenRule || fallbackData.goldenRule,
       recommendedPicks: Array.isArray(parsed.recommendedPicks) && parsed.recommendedPicks.length > 0 ? parsed.recommendedPicks : fallbackData.recommendedPicks,

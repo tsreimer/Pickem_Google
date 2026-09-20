@@ -168,11 +168,11 @@ export const Home: React.FC = () => {
     let textToSpeak = '';
 
     if (activeVoiceMode === 'sal') {
-      textToSpeak = "Dis is Coach Sal Ditkofsky! Good evening Chicago! Eleven out of twelve managers in Yahoo Group thirteen-double-oh-three got taken behind the woodshed by San Francisco in SoFi Stadium! Shoeman put his number one sixteen-point anchor right on the Rams! Boom, down goes Frazier! But Todd Reimer held all seven top confidence anchors on heavy favorites. Put double giardiniera on da victory beef!";
+      textToSpeak = "Dis is Coach Sal Ditkofsky! Good evening Chicago! Eleven out of twelve managers in the league got taken behind the woodshed by San Francisco in SoFi Stadium! Shoeman put his number one sixteen-point anchor right on the Rams! Boom, down goes Frazier! But Todd Reimer held all seven top confidence anchors on heavy favorites. Put double giardiniera on da victory beef!";
     } else if (activeVoiceMode === 'chloe') {
-      textToSpeak = "Dr. Chloe Vance reporting from MIT Sloan Analytics. A staggering 114 aggregate confidence points vaporized at SoFi. Orange crush executed the lone 49ers upset for plus-10 to seize first place. However, Todd Reimer preserved 91 confidence points on heavy favorites, giving him the highest Monte Carlo win equity in Group 13003.";
+      textToSpeak = "Dr. Chloe Vance reporting from MIT Sloan Analytics. A staggering 114 aggregate confidence points vaporized at SoFi. Orange crush executed the lone 49ers upset for plus-10 to seize first place. However, Todd Reimer preserved 91 confidence points on heavy favorites, giving him the highest Monte Carlo win equity in the league.";
     } else if (activeVoiceMode === 'commish') {
-      textToSpeak = "Official Initech Invitational Group #13003 Carnage Report. Eleven of twelve franchises burned on the Rams. Orange crush leads with 26 points. Todd Reimer holds a league-best recovery index with all top seven anchors live for 127 maximum remaining points.";
+      textToSpeak = "Official Initech Invitational Carnage Report. Eleven of twelve franchises burned on the Rams. Orange crush leads with 26 points. Todd Reimer holds a league-best recovery index with all top seven anchors live for 127 maximum remaining points.";
     } else {
       // Dual show banter
       textToSpeak = track.dialogueTurns
@@ -276,7 +276,7 @@ export const Home: React.FC = () => {
             <span>Week 1 Wrap & Week 2 Live</span>
           </span>
           <span className="text-slate-600">•</span>
-          <span className="text-purple-300">Yahoo Group #13003</span>
+          <span className="text-purple-300">Initech Invitational</span>
           <span className="text-slate-600">•</span>
           <span className="text-cyan-400 flex items-center gap-1">
             <Sparkles className="w-3 h-3" />
@@ -415,7 +415,7 @@ export const Home: React.FC = () => {
             </div>
 
             <p className="text-sm sm:text-base text-slate-200 leading-relaxed">
-              What a brutal opening week in Yahoo Group #13003. Eleven out of twelve managers assigned high confidence to Matthew Stafford and the Rams, only to watch Kyle Shanahan's 49ers pull off a 24–21 road upset that incinerated <strong className="text-red-400 font-bold">114 aggregate confidence points</strong>.
+              What a brutal opening week in the Initech Invitational. Eleven out of twelve managers assigned high confidence to Matthew Stafford and the Rams, only to watch Kyle Shanahan's 49ers pull off a 24–21 road upset that incinerated <strong className="text-red-400 font-bold">114 aggregate confidence points</strong>.
             </p>
 
             {/* Scannable Highlights Grid */}
@@ -607,7 +607,7 @@ export const Home: React.FC = () => {
           </div>
 
           <div className="text-xs font-mono text-slate-400 bg-[#151D2A] border border-[#1E293B] px-3 py-1.5 rounded-lg self-start sm:self-auto">
-            10 Franchises in Group #13003
+            10 Franchises in the League
           </div>
         </div>
 

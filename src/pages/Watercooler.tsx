@@ -453,6 +453,7 @@ export const Watercooler: React.FC = () => {
             { speaker: activeTrack.speaker1?.name || 'Sal', voiceName: selectedVoice1 },
             { speaker: activeTrack.speaker2?.name || activeCohost.name, voiceName: selectedVoice2 },
           ],
+          force: true,
         }),
       });
 
@@ -617,7 +618,7 @@ export const Watercooler: React.FC = () => {
           chaser: `${secondTeam.ownerName} (${secondTeam.teamName})`,
           sweatGame: sweatMatchup,
           margin,
-          leagueGroup: 'Yahoo Pick\'em #13003',
+          leagueGroup: 'The Initech Invitational',
           speaker1Voice: selectedVoice1,
           speaker2Voice: selectedVoice2,
           cohostArchetype: selectedCohostId,
@@ -764,10 +765,10 @@ export const Watercooler: React.FC = () => {
           <button
             onClick={() => setIsYahooSyncModalOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-950/60 hover:bg-purple-900/80 border border-purple-800/80 text-purple-200 font-mono text-xs font-semibold transition"
-            title="Inspect Yahoo Group 13003 and ESPN live score feed"
+            title="Inspect Initech Invitational and ESPN live score feed"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>Grounded: Yahoo #13003</span>
+            <span>Grounded: Initech Invitational</span>
           </button>
 
           <button
@@ -838,7 +839,7 @@ export const Watercooler: React.FC = () => {
         </div>
 
         <div className="hidden lg:flex items-center gap-2 text-xs font-mono text-slate-400 pr-2">
-          <span>Yahoo #13003 Live Status:</span>
+          <span>League Live Status:</span>
           <span className="text-emerald-400 font-bold">14 Games Remaining</span>
         </div>
       </div>

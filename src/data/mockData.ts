@@ -13,7 +13,7 @@ import {
 export const INITIAL_TEAMS: Team[] = [
   {
     id: 'team-orange',
-    yahooTeamId: 'y-13003-5',
+    yahooTeamId: 'y-initech-5',
     teamName: 'Orange crush',
     ownerName: 'Orange crush',
     avatar: 'O',
@@ -34,7 +34,7 @@ export const INITIAL_TEAMS: Team[] = [
   },
   {
     id: 'team-shoeman',
-    yahooTeamId: 'y-13003-3',
+    yahooTeamId: 'y-initech-3',
     teamName: 'Shoeman',
     ownerName: 'Shoeman',
     avatar: 'S',
@@ -55,7 +55,7 @@ export const INITIAL_TEAMS: Team[] = [
   },
   {
     id: 'team-3d',
-    yahooTeamId: 'y-13003-8',
+    yahooTeamId: 'y-initech-8',
     teamName: '3-D',
     ownerName: '3-D',
     avatar: '3',
@@ -76,7 +76,7 @@ export const INITIAL_TEAMS: Team[] = [
   },
   {
     id: 'team-snap',
-    yahooTeamId: 'y-13003-9',
+    yahooTeamId: 'y-initech-9',
     teamName: 'Snap Judgments',
     ownerName: 'Snap Judgments',
     avatar: 'J',
@@ -97,7 +97,7 @@ export const INITIAL_TEAMS: Team[] = [
   },
   {
     id: 'team-torts',
-    yahooTeamId: 'y-13003-6',
+    yahooTeamId: 'y-initech-6',
     teamName: 'Torts Illustrated',
     ownerName: 'Torts Illustrated',
     avatar: 'T',
@@ -118,7 +118,7 @@ export const INITIAL_TEAMS: Team[] = [
   },
   {
     id: 'team-bijan',
-    yahooTeamId: 'y-13003-7',
+    yahooTeamId: 'y-initech-7',
     teamName: 'Bed Bath & Bijan',
     ownerName: 'Bed Bath & Bijan',
     avatar: 'B',
@@ -139,7 +139,7 @@ export const INITIAL_TEAMS: Team[] = [
   },
   {
     id: 'team-niner',
-    yahooTeamId: 'y-13003-4',
+    yahooTeamId: 'y-initech-4',
     teamName: 'Niner Faithful',
     ownerName: 'Niner Faithful',
     avatar: 'N',
@@ -160,7 +160,7 @@ export const INITIAL_TEAMS: Team[] = [
   },
   {
     id: 'team-todd',
-    yahooTeamId: 'y-13003-1',
+    yahooTeamId: 'y-initech-1',
     teamName: 'CramItUp Your CramHole Lafleur',
     ownerName: 'Todd Reimer',
     avatar: 'C',
@@ -181,7 +181,7 @@ export const INITIAL_TEAMS: Team[] = [
   },
   {
     id: 'team-broncos',
-    yahooTeamId: 'y-13003-11',
+    yahooTeamId: 'y-initech-11',
     teamName: 'BroncosCountry (PatN)',
     ownerName: 'PatN',
     avatar: 'B',
@@ -202,7 +202,7 @@ export const INITIAL_TEAMS: Team[] = [
   },
   {
     id: 'team-bird',
-    yahooTeamId: 'y-13003-12',
+    yahooTeamId: 'y-initech-12',
     teamName: 'Bird Boss',
     ownerName: 'Bird Boss',
     avatar: 'B',
@@ -223,7 +223,7 @@ export const INITIAL_TEAMS: Team[] = [
   },
   {
     id: 'team-limps',
-    yahooTeamId: 'y-13003-2',
+    yahooTeamId: 'y-initech-2',
     teamName: 'Sir Limps-A-Lot',
     ownerName: 'Sir Limps-A-Lot',
     avatar: 'L',
@@ -244,7 +244,7 @@ export const INITIAL_TEAMS: Team[] = [
   },
   {
     id: 'team-sacks',
-    yahooTeamId: 'y-13003-10',
+    yahooTeamId: 'y-initech-10',
     teamName: 'Sacks and the City',
     ownerName: 'Sacks and the City',
     avatar: 'S',
@@ -265,7 +265,7 @@ export const INITIAL_TEAMS: Team[] = [
   },
 ];
 
-// Week 1 Yahoo Games directly from Yahoo Group #13003
+// Week 1 Games directly from the Initech Invitational
 export const YAHOO_WEEK_GAMES: YahooGroupGame[] = [
   { id: 1, favored: 'Sea', spread: 3.5, underdog: 'NE', winner: 'Sea', isLocked: true, status: 'final' },
   { id: 2, favored: 'LAR', spread: 3.5, underdog: 'SF', winner: 'SF', isLocked: true, status: 'final' },
@@ -285,7 +285,7 @@ export const YAHOO_WEEK_GAMES: YahooGroupGame[] = [
   { id: 16, favored: 'KC', spread: 3.0, underdog: 'Den', isLocked: false, status: 'scheduled' },
 ];
 
-// Exact Week 1 Yahoo Group #13003 Pick Matrix from screenshot
+// Exact Week 1 Initech Invitational Pick Matrix from screenshot
 export const YAHOO_GROUP_PICKS_MATRIX: YahooGroupTeamRow[] = [
   {
     teamId: 'team-orange',
@@ -957,13 +957,13 @@ export const AUDIO_TRACKS: AudioBroadcastTrack[] = [
     characterPersona: 'Coach Sal Ditkofsky (Bridgeport Chicago, Ditka grit) & Dr. Chloe Vance (MIT Sloan Analytics, crisp logic)',
     sceneBackstory: 'Late evening at Vito & Sal\'s Italian Beef on 35th and Halsted. Two games are in the books: Seattle held off New England, and San Francisco shocked the Rams. Grease on the grill, Chloe\'s laptop running Monte Carlo regressions on Todd Reimer\'s 14 remaining picks.',
     directorsNotes: 'Director\'s Note: Two-speaker live sports talk show banter. Sal speaks in an authentic South-Side Chicago Ditka accent (gravelly baritone, table slaps, shouting passionately). Chloe speaks with crisp, fast, authoritative Ivy League analytical precision with dry sarcastic wit.',
-    scriptText: "TTS the following conversation between Sal and Chloe:\nSal: [slaps laminate table] Good evening, Chicago gridiron faithful! Dis is Coach Sal comin' to ya live from Vito & Sal's Beef on 35th and Halsted! Wit' me, dissectin' da carnage from her MIT spreadsheet, is Dr. Chloe Vance! Chloe, did you see SoFi Stadium?! Eleven out of twelve managers in Yahoo Group thirteen-double-oh-three got taken behind da woodshed by San Francisco!\nChloe: [sips matcha latte] A catastrophic 114 confidence points vaporized, Sal. The entire pool rode the Rams minus 3.5, and Kyle Shanahan executed a defensive masterclass. Only Orange crush had the intestinal fortitude—or algorithmic luck—to assign 10 confidence points to the 49ers upset, catapulting them into sole possession of first place with 26 points.\nSal: An absolute beauty by Orange crush! But my heart breaks for Shoeman! Shoeman put his number one sixteen-point anchor right on da Rams! Boom! Down goes Frazier! His maximum season ceiling is clipped to one-twenty!\nChloe: And let's not overlook Niner Faithful, who suffered the ultimate cognitive dissonance: picked against his own 49ers for 11 points, watched San Francisco win, and forfeited 11 points. However, Sal, looking ahead at the remaining 14 games, the real story is Todd Reimer and 'CramItUp Your CramHole Lafleur'.\nSal: [chuckles warmly] Tell 'em, Chloe! People see Todd at eight points and think he's down! But Todd's playin' chess while dese guys are playin' checkers!\nChloe: Exactly. Todd absorbed a 9-point hit on the Rams, but preserved his top seven confidence anchors: 16 on the Chargers, 15 on the Jaguars, 14 on Detroit, 13 on Philly, 12 on Baltimore, 11 on Pittsburgh, and 10 on Cincy. That is 91 confidence points concentrated on heavy favorites. My Monte Carlo simulation gives Todd the single highest probability of capturing first place by Monday night.\nSal: That's what I'm talkin' about! Intangibles and discipline! Cash dem heavy anchors, ride da Chargers minus ten, and put double giardiniera on da victory beef! Let's get to Sunday!",
-    fullPromptPayload: "TTS the following conversation between Sal and Chloe. Director's Note: Two-speaker live sports talk show banter. Sal speaks in an authentic South-Side Chicago Ditka accent (gravelly baritone, 'da', 'dis', 'dat', table slaps). Chloe speaks with crisp, fast, authoritative Ivy League analytical precision. Scene: Late evening at Vito & Sal's Beef on 35th & Halsted.\n\nTTS the following conversation between Sal and Chloe:\nSal: [slaps laminate table] Good evening, Chicago gridiron faithful! Dis is Coach Sal comin' to ya live from Vito & Sal's Beef on 35th and Halsted! Wit' me, dissectin' da carnage from her MIT spreadsheet, is Dr. Chloe Vance! Chloe, did you see SoFi Stadium?! Eleven out of twelve managers in Yahoo Group thirteen-double-oh-three got taken behind da woodshed by San Francisco!\nChloe: [sips matcha latte] A catastrophic 114 confidence points vaporized, Sal. The entire pool rode the Rams minus 3.5, and Kyle Shanahan executed a defensive masterclass. Only Orange crush had the intestinal fortitude—or algorithmic luck—to assign 10 confidence points to the 49ers upset, catapulting them into sole possession of first place with 26 points.\nSal: An absolute beauty by Orange crush! But my heart breaks for Shoeman! Shoeman put his number one sixteen-point anchor right on da Rams! Boom! Down goes Frazier! His maximum season ceiling is clipped to one-twenty!\nChloe: And let's not overlook Niner Faithful, who suffered the ultimate cognitive dissonance: picked against his own 49ers for 11 points, watched San Francisco win, and forfeited 11 points. However, Sal, looking ahead at the remaining 14 games, the real story is Todd Reimer and 'CramItUp Your CramHole Lafleur'.\nSal: [chuckles warmly] Tell 'em, Chloe! People see Todd at eight points and think he's down! But Todd's playin' chess while dese guys are playin' checkers!\nChloe: Exactly. Todd absorbed a 9-point hit on the Rams, but preserved his top seven confidence anchors: 16 on the Chargers, 15 on the Jaguars, 14 on Detroit, 13 on Philly, 12 on Baltimore, 11 on Pittsburgh, and 10 on Cincy. That is 91 confidence points concentrated on heavy favorites. My Monte Carlo simulation gives Todd the single highest probability of capturing first place by Monday night.\nSal: That's what I'm talkin' about! Intangibles and discipline! Cash dem heavy anchors, ride da Chargers minus ten, and put double giardiniera on da victory beef! Let's get to Sunday!",
+    scriptText: "TTS the following conversation between Sal and Chloe:\nSal: [slaps laminate table] Good evening, Chicago gridiron faithful! Dis is Coach Sal comin' to ya live from Vito & Sal's Beef on 35th and Halsted! Wit' me, dissectin' da carnage from her MIT spreadsheet, is Dr. Chloe Vance! Chloe, did you see SoFi Stadium?! Eleven out of twelve managers in the league got taken behind da woodshed by San Francisco!\nChloe: [sips matcha latte] A catastrophic 114 confidence points vaporized, Sal. The entire pool rode the Rams minus 3.5, and Kyle Shanahan executed a defensive masterclass. Only Orange crush had the intestinal fortitude—or algorithmic luck—to assign 10 confidence points to the 49ers upset, catapulting them into sole possession of first place with 26 points.\nSal: An absolute beauty by Orange crush! But my heart breaks for Shoeman! Shoeman put his number one sixteen-point anchor right on da Rams! Boom! Down goes Frazier! His maximum season ceiling is clipped to one-twenty!\nChloe: And let's not overlook Niner Faithful, who suffered the ultimate cognitive dissonance: picked against his own 49ers for 11 points, watched San Francisco win, and forfeited 11 points. However, Sal, looking ahead at the remaining 14 games, the real story is Todd Reimer and 'CramItUp Your CramHole Lafleur'.\nSal: [chuckles warmly] Tell 'em, Chloe! People see Todd at eight points and think he's down! But Todd's playin' chess while dese guys are playin' checkers!\nChloe: Exactly. Todd absorbed a 9-point hit on the Rams, but preserved his top seven confidence anchors: 16 on the Chargers, 15 on the Jaguars, 14 on Detroit, 13 on Philly, 12 on Baltimore, 11 on Pittsburgh, and 10 on Cincy. That is 91 confidence points concentrated on heavy favorites. My Monte Carlo simulation gives Todd the single highest probability of capturing first place by Monday night.\nSal: That's what I'm talkin' about! Intangibles and discipline! Cash dem heavy anchors, ride da Chargers minus ten, and put double giardiniera on da victory beef! Let's get to Sunday!",
+    fullPromptPayload: "TTS the following conversation between Sal and Chloe. Director's Note: Two-speaker live sports talk show banter. Sal speaks in an authentic South-Side Chicago Ditka accent (gravelly baritone, 'da', 'dis', 'dat', table slaps). Chloe speaks with crisp, fast, authoritative Ivy League analytical precision. Scene: Late evening at Vito & Sal's Beef on 35th & Halsted.\n\nTTS the following conversation between Sal and Chloe:\nSal: [slaps laminate table] Good evening, Chicago gridiron faithful! Dis is Coach Sal comin' to ya live from Vito & Sal's Beef on 35th and Halsted! Wit' me, dissectin' da carnage from her MIT spreadsheet, is Dr. Chloe Vance! Chloe, did you see SoFi Stadium?! Eleven out of twelve managers in the league got taken behind da woodshed by San Francisco!\nChloe: [sips matcha latte] A catastrophic 114 confidence points vaporized, Sal. The entire pool rode the Rams minus 3.5, and Kyle Shanahan executed a defensive masterclass. Only Orange crush had the intestinal fortitude—or algorithmic luck—to assign 10 confidence points to the 49ers upset, catapulting them into sole possession of first place with 26 points.\nSal: An absolute beauty by Orange crush! But my heart breaks for Shoeman! Shoeman put his number one sixteen-point anchor right on da Rams! Boom! Down goes Frazier! His maximum season ceiling is clipped to one-twenty!\nChloe: And let's not overlook Niner Faithful, who suffered the ultimate cognitive dissonance: picked against his own 49ers for 11 points, watched San Francisco win, and forfeited 11 points. However, Sal, looking ahead at the remaining 14 games, the real story is Todd Reimer and 'CramItUp Your CramHole Lafleur'.\nSal: [chuckles warmly] Tell 'em, Chloe! People see Todd at eight points and think he's down! But Todd's playin' chess while dese guys are playin' checkers!\nChloe: Exactly. Todd absorbed a 9-point hit on the Rams, but preserved his top seven confidence anchors: 16 on the Chargers, 15 on the Jaguars, 14 on Detroit, 13 on Philly, 12 on Baltimore, 11 on Pittsburgh, and 10 on Cincy. That is 91 confidence points concentrated on heavy favorites. My Monte Carlo simulation gives Todd the single highest probability of capturing first place by Monday night.\nSal: That's what I'm talkin' about! Intangibles and discipline! Cash dem heavy anchors, ride da Chargers minus ten, and put double giardiniera on da victory beef! Let's get to Sunday!",
     voiceName: 'Fenrir + Kore',
     dialogueTurns: [
       {
         speaker: 'Sal',
-        text: "[slaps laminate table] Good evening, Chicago gridiron faithful! Dis is Coach Sal comin' to ya live from Vito & Sal's Beef on 35th and Halsted! Wit' me, dissectin' da carnage from her MIT spreadsheet, is Dr. Chloe Vance! Chloe, did you see SoFi Stadium?! Eleven out of twelve managers in Yahoo Group thirteen-double-oh-three got taken behind da woodshed by San Francisco!",
+        text: "[slaps laminate table] Good evening, Chicago gridiron faithful! Dis is Coach Sal comin' to ya live from Vito & Sal's Beef on 35th and Halsted! Wit' me, dissectin' da carnage from her MIT spreadsheet, is Dr. Chloe Vance! Chloe, did you see SoFi Stadium?! Eleven out of twelve managers in the league got taken behind da woodshed by San Francisco!",
         stageDirection: 'slaps table, booming Ditka gravelly baritone',
       },
       {
