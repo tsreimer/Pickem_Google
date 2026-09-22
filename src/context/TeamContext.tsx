@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Team, Game, CommentMessage, PushNotificationItem, YahooLockWindow, SyncAuditLogEntry, YahooGroupTeamRow } from '../types';
-import { INITIAL_TEAMS, WEEK_1_TEAMS, WEEK_2_TEAMS, INITIAL_GAMES, INITIAL_COMMENTS, INITIAL_NOTIFICATIONS, YAHOO_WEEK_1_PICKS_MATRIX, YAHOO_WEEK_2_PICKS_MATRIX, YAHOO_GROUP_PICKS_MATRIX } from '../data/mockData';
+import { INITIAL_TEAMS, WEEK_1_TEAMS, WEEK_2_TEAMS, WEEK_3_TEAMS, INITIAL_GAMES, INITIAL_COMMENTS, INITIAL_NOTIFICATIONS, YAHOO_WEEK_1_PICKS_MATRIX, YAHOO_WEEK_2_PICKS_MATRIX, YAHOO_WEEK_3_PICKS_MATRIX, YAHOO_GROUP_PICKS_MATRIX } from '../data/mockData';
 import { audioPreGenerationService } from '../services/audioPreGenerationService';
 
 interface TeamContextType {
@@ -57,16 +57,19 @@ interface TeamContextType {
 const TeamContext = createContext<TeamContextType | undefined>(undefined);
 
 export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentWeek, setCurrentWeekState] = useState<number>(2);
-  const [teams, setTeams] = useState<Team[]>(WEEK_2_TEAMS);
+  const [currentWeek, setCurrentWeekState] = useState<number>(3);
+  const [teams, setTeams] = useState<Team[]>(WEEK_3_TEAMS);
   const [games, setGames] = useState<Game[]>(INITIAL_GAMES);
   const [comments, setComments] = useState<CommentMessage[]>(INITIAL_COMMENTS);
   const [notifications, setNotifications] = useState<PushNotificationItem[]>(INITIAL_NOTIFICATIONS);
-  const [groupPicksMatrix, setGroupPicksMatrix] = useState<YahooGroupTeamRow[]>(YAHOO_WEEK_2_PICKS_MATRIX);
+  const [groupPicksMatrix, setGroupPicksMatrix] = useState<YahooGroupTeamRow[]>(YAHOO_WEEK_3_PICKS_MATRIX);
 
   const setCurrentWeek = (week: number) => {
     setCurrentWeekState(week);
-    if (week === 2) {
+    if (week === 3) {
+      setTeams(WEEK_3_TEAMS);
+      setGroupPicksMatrix(YAHOO_WEEK_3_PICKS_MATRIX);
+    } else if (week === 2) {
       setTeams(WEEK_2_TEAMS);
       setGroupPicksMatrix(YAHOO_WEEK_2_PICKS_MATRIX);
     } else if (week === 1) {
@@ -103,7 +106,10 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (Array.isArray(mData.matrix)) setGroupPicksMatrix(mData.matrix);
                 if (Array.isArray(mData.teams)) setTeams(mData.teams);
               } else {
-                if (data.currentWeek === 2) {
+                if (data.currentWeek === 3) {
+                  setTeams(WEEK_3_TEAMS);
+                  setGroupPicksMatrix(YAHOO_WEEK_3_PICKS_MATRIX);
+                } else if (data.currentWeek === 2) {
                   setTeams(WEEK_2_TEAMS);
                   setGroupPicksMatrix(YAHOO_WEEK_2_PICKS_MATRIX);
                 } else {
@@ -113,7 +119,10 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
               }
             })
             .catch(() => {
-              if (data.currentWeek === 2) {
+              if (data.currentWeek === 3) {
+                setTeams(WEEK_3_TEAMS);
+                setGroupPicksMatrix(YAHOO_WEEK_3_PICKS_MATRIX);
+              } else if (data.currentWeek === 2) {
                 setTeams(WEEK_2_TEAMS);
                 setGroupPicksMatrix(YAHOO_WEEK_2_PICKS_MATRIX);
               } else {
@@ -178,68 +187,62 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
       day: 'Thursday',
       period: 'Evening',
       typicalKickoff: 'Thursday 8:15 PM EDT (TNF)',
-      status: 'synced',
+      status: 'pending',
       gamesCount: 1,
-      gamesList: ['DAL @ NYG (Final: DAL 20 - NYG 15)'],
-      lockedAt: '2026-09-17T20:15:00-04:00',
-      syncedAt: '2026-09-17T20:15:09-04:00',
-      lastSyncResult: 'All 12 Initech Invitational manager picks locked & ingested for TNF',
-      autoSyncTriggered: true,
+      gamesList: ['ATL @ GB (Thu 8:15 PM EDT • Amazon Prime Video)'],
+      lastSyncResult: 'Auto-sync armed. Will lock & ingest 12 manager picks at kickoff.',
+      autoSyncTriggered: false,
     },
     {
       id: 'sun_morning',
       name: 'Sunday Morning Lock',
-      kickoffLabel: 'Sun 1:00 PM',
+      kickoffLabel: 'Sun 10:00 AM PDT / 1:00 PM EDT',
       day: 'Sunday',
       period: 'Morning',
-      typicalKickoff: 'Sunday 1:00 PM EDT (Early Slate)',
-      status: 'synced',
-      gamesCount: 8,
-      gamesList: ['GB @ DET (Final: DET 31 - GB 29)', 'CIN @ BAL (Final: BAL 41 - CIN 38)', 'TEN @ NYJ', 'IND @ CHI', 'CLE @ JAX', 'CAR @ TB', 'MIA @ BUF', 'NO @ ATL'],
-      lockedAt: '2026-09-20T13:00:00-04:00',
-      syncedAt: '2026-09-20T13:00:14-04:00',
-      lastSyncResult: 'Early slate locked. 8 matchups revealed across 12 manager cards in matrix.',
-      autoSyncTriggered: true,
+      typicalKickoff: 'Sunday 1:00 PM EDT / 10:00 AM PDT (Early Slate)',
+      status: 'pending',
+      gamesCount: 9,
+      gamesList: ['LAC @ BUF', 'CAR @ CLE', 'NYJ @ DET', 'HOU @ IND', 'KC @ MIA', 'TEN @ NYG', 'CIN @ PIT', 'SEA @ WSH', 'NE @ JAX'],
+      lastSyncResult: 'Scheduled for Sunday 1:00 PM EDT kickoff.',
+      autoSyncTriggered: false,
     },
     {
       id: 'sun_afternoon',
       name: 'Sunday Afternoon Lock',
-      kickoffLabel: 'Sun 4:05 PM / 4:25 PM',
+      kickoffLabel: 'Sun 1:05 PM / 1:25 PM PDT',
       day: 'Sunday',
       period: 'Afternoon',
-      typicalKickoff: 'Sunday 4:25 PM EDT (Late Slate)',
-      status: 'synced',
+      typicalKickoff: 'Sunday 4:05 / 4:25 PM EDT (Late Slate)',
+      status: 'pending',
       gamesCount: 4,
-      gamesList: ['BUF @ KC (Q4 01:18 • Sweat Game)', 'DEN @ LAC (Final: LAC 23 - DEN 16)', 'LAR @ ARI (Final: LAR 27 - ARI 24)', 'WAS @ PHI (Scheduled)'],
-      lockedAt: '2026-09-20T16:25:00-04:00',
-      syncedAt: '2026-09-20T16:25:08-04:00',
-      lastSyncResult: 'Late afternoon slate locked & synced. Active sweat game BUF @ KC streaming live.',
-      autoSyncTriggered: true,
+      gamesList: ['ARI @ SF', 'MIN @ TB', 'BAL @ DAL', 'LV @ NO'],
+      lastSyncResult: 'Scheduled for Sunday 4:05 PM / 4:25 PM EDT kickoff.',
+      autoSyncTriggered: false,
     },
     {
       id: 'sun_evening',
       name: 'Sunday Evening Lock',
-      kickoffLabel: 'Sun 8:20 PM',
+      kickoffLabel: 'Sun 5:20 PM PDT / 8:20 PM EDT',
       day: 'Sunday',
       period: 'Evening',
       typicalKickoff: 'Sunday 8:20 PM EDT (SNF)',
       status: 'pending',
       gamesCount: 1,
-      gamesList: ['LV @ MIA (Sun 8:20 PM)'],
-      lastSyncResult: 'Pending kickoff lock at 8:20 PM EDT. Automated sync will trigger immediately upon lock.',
+      gamesList: ['LAR @ DEN (Sun 8:20 PM EDT • NBC)'],
+      lastSyncResult: 'Scheduled for Sunday Night Football kickoff.',
       autoSyncTriggered: false,
     },
     {
       id: 'mon_evening',
       name: 'Monday Evening Lock',
-      kickoffLabel: 'Mon 8:15 PM',
+      kickoffLabel: 'Mon 5:15 PM PDT / 8:15 PM EDT',
       day: 'Monday',
       period: 'Evening',
       typicalKickoff: 'Monday 8:15 PM EDT (MNF)',
       status: 'pending',
-      gamesCount: 2,
-      gamesList: ['SF @ SEA (Mon 8:15 PM)', 'BAL @ LAC (Mon 8:15 PM)'],
-      lastSyncResult: 'Pending Monday Night Football lock. Automated sync scheduled after kickoff lock.',
+      gamesCount: 1,
+      gamesList: ['PHI @ CHI (Mon 8:15 PM EDT • ESPN)'],
+      lastSyncResult: 'Scheduled for Monday Night Football kickoff & final weekly settlement.',
       autoSyncTriggered: false,
     },
   ]);

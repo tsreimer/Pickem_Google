@@ -54,7 +54,7 @@ export const Home: React.FC = () => {
     async function loadWeeklyRecap() {
       try {
         setIsLoadingAudio(true);
-        const res = await fetch('/api/audio/weekly-recap');
+        const res = await fetch(`/api/audio/weekly-recap?week=${currentWeek}`);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const json = await res.json();
         if (isMounted && json.success) {
@@ -99,7 +99,7 @@ export const Home: React.FC = () => {
         clearInterval(timerRef.current);
       }
     };
-  }, []);
+  }, [currentWeek]);
 
   // Update timer during playback
   useEffect(() => {
@@ -276,7 +276,7 @@ export const Home: React.FC = () => {
           <div className="inline-flex flex-wrap items-center justify-center gap-2 p-1.5 px-3 rounded-full bg-[#151D2A] border border-[#1E293B] text-xs font-semibold text-slate-300 shadow-sm">
             <span className="flex items-center gap-1.5 text-emerald-400">
               <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              <span>{currentWeek === 2 ? 'Week 2 Complete (Official Final Standings)' : 'Week 1 Wrap (Final Standings)'}</span>
+              <span>{currentWeek === 3 ? 'Week 3 Active Slate (16 Games Loaded)' : currentWeek === 2 ? 'Week 2 Complete (Official Final Standings)' : 'Week 1 Wrap (Final Standings)'}</span>
             </span>
             <span className="text-slate-600">•</span>
             <span className="text-purple-300">The Initech Invitational</span>
@@ -302,14 +302,24 @@ export const Home: React.FC = () => {
             </button>
             <button
               onClick={() => setCurrentWeek(2)}
-              className={`px-3 py-1 rounded-full font-bold text-xs transition cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3 py-1 rounded-full font-bold text-xs transition cursor-pointer ${
                 currentWeek === 2
+                  ? 'bg-purple-600 text-white shadow font-black'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Week 2 (Final)
+            </button>
+            <button
+              onClick={() => setCurrentWeek(3)}
+              className={`px-3 py-1 rounded-full font-bold text-xs transition cursor-pointer flex items-center gap-1.5 ${
+                currentWeek === 3
                   ? 'bg-emerald-500 text-black shadow font-black'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-black"></span>
-              Week 2 (Final)
+              <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse"></span>
+              Week 3 (Active)
             </button>
           </div>
         </div>
@@ -363,17 +373,19 @@ export const Home: React.FC = () => {
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-950/80 border border-emerald-700/60 text-[11px] font-mono font-bold text-emerald-300 uppercase tracking-wide">
                   <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                  FINAL • {currentWeek === 2 ? 'WEEK 2 CHAMPION CROWNED' : 'WEEK 1 FINAL RECAP'}
+                  {currentWeek === 3 ? 'ACTIVE • WEEK 3 PREVIEW & STRATEGY' : currentWeek === 2 ? 'FINAL • WEEK 2 CHAMPION CROWNED' : 'FINAL • WEEK 1 FINAL RECAP'}
                 </span>
                 <span className="text-xs font-mono text-slate-400 px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700">
-                  {currentWeek === 2 ? 'Episode 2 • 16 of 16 Games Settled' : 'Episode 1 • 01:34 Pre-Generated'}
+                  {currentWeek === 3 ? 'Episode 3 • 16 Matchups Loaded' : currentWeek === 2 ? 'Episode 2 • 16 of 16 Games Settled' : 'Episode 1 • 01:34 Pre-Generated'}
                 </span>
                 <span className="text-xs font-mono text-emerald-400 px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-800 hidden sm:inline-block">
                   ⚡ 24kHz Neural Audio
                 </span>
               </div>
               <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                {currentWeek === 2
+                {currentWeek === 3
+                  ? 'Halsted & Ivy: Week 3 Preview & Strategy — Coach Sal & Dr. Chloe'
+                  : currentWeek === 2
                   ? 'Halsted & Ivy: Week 2 Official Wrap — Bird Boss Triumphs with 104 Pts'
                   : 'Halsted & Ivy: Week 1 Recap & SoFi Bloodbath'}
               </h2>
@@ -446,13 +458,19 @@ export const Home: React.FC = () => {
                 <span>Executive Written Recap (Week {currentWeek})</span>
               </div>
               <span className="text-[11px] font-mono text-slate-500">
-                {currentWeek === 2
+                {currentWeek === 3
+                  ? 'Active Slate • All 16 Matchups Ingested • Thursday Kickoff ATL @ GB'
+                  : currentWeek === 2
                   ? 'All 16 Games Final • Official Yahoo Group ID# 13003 Verified'
                   : 'Carnage Index: 114 Pts Lost in Week 1'}
               </span>
             </div>
 
-            {currentWeek === 2 ? (
+            {currentWeek === 3 ? (
+              <p className="text-sm sm:text-base text-slate-200 leading-relaxed">
+                Welcome to Week 3 of the Initech Invitational! With all 16 games officially loaded from Yahoo Group ID# 13003 and spreads calibrated, 12 managers enter the slate seeking to claim the next <strong className="text-emerald-400 font-bold">$25.00 weekly prize</strong>. Week 3 kicks off Thursday night with <strong className="text-amber-300 font-bold">Atlanta at Green Bay</strong>, followed by heavy Sunday slate showdowns featuring <strong className="text-cyan-300 font-bold">Kansas City at Miami</strong> and <strong className="text-orange-400 font-bold">Baltimore at Dallas</strong>. The automated sync daemon is armed across all 5 kickoff windows.
+              </p>
+            ) : currentWeek === 2 ? (
               <p className="text-sm sm:text-base text-slate-200 leading-relaxed">
                 Week 2 has officially concluded across all 16 games! <strong className="text-amber-400 font-bold">Amy (Bird Boss)</strong> engineered an unbelievable week, capturing sole 1st place with <strong className="text-white font-bold">104 points</strong> and claiming the entire <strong className="text-emerald-400 font-bold">$25.00 weekly purse</strong>. Her winning masterpiece was staking a bold <strong className="text-amber-300">15-point confidence anchor</strong> on the underdog Las Vegas Raiders, while also cashing SF (16) and KC (11). <strong className="text-cyan-300 font-bold">Steve (Shoeman)</strong> captured runner-up at <strong className="text-white">99 points</strong> after cashing Buffalo (16) and SF (15). Todd Reimer weathered heavy pool upsets to finish with <strong className="text-white">69 points</strong>, cashing his top anchor on San Francisco (16) and late anchors on KC (11) and LAR (13).
               </p>
@@ -463,7 +481,49 @@ export const Home: React.FC = () => {
             )}
 
             {/* Scannable Highlights Grid */}
-            {currentWeek === 2 ? (
+            {currentWeek === 3 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+                <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-start gap-2.5">
+                  <span className="text-xl">🏈</span>
+                  <div>
+                    <h4 className="text-xs font-bold text-amber-400">TNF Kickoff</h4>
+                    <p className="text-[11px] text-slate-300">
+                      Atlanta at Green Bay opens Week 3. Lock window Thursday 8:15 PM EDT.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-start gap-2.5">
+                  <span className="text-xl">⚡</span>
+                  <div>
+                    <h4 className="text-xs font-bold text-cyan-400">Auto-Sync Armed</h4>
+                    <p className="text-[11px] text-slate-300">
+                      Scheduled across 5 kickoff lock windows for automated Yahoo ingestion.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-start gap-2.5">
+                  <span className="text-xl">📊</span>
+                  <div>
+                    <h4 className="text-xs font-bold text-blue-400">16 Games on Deck</h4>
+                    <p className="text-[11px] text-slate-300">
+                      Spreads & point totals loaded for all Sunday and Monday Night matchups.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-start gap-2.5">
+                  <span className="text-xl">💰</span>
+                  <div>
+                    <h4 className="text-xs font-bold text-emerald-400">$25 Weekly Purse</h4>
+                    <p className="text-[11px] text-slate-300">
+                      Top confidence score in Week 3 takes home the $25.00 weekly cash prize.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : currentWeek === 2 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
                 <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-start gap-2.5">
                   <span className="text-xl">🏆</span>

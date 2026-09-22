@@ -174,14 +174,51 @@ export const Commissioner: React.FC = () => {
     }, 50);
   };
 
-  // Load a preset
-  const handleSelectPreset = (presetId: string) => {
+  // Load a preset and immediately broadcast to server & league audio (Watercooler & Weekly Recap)
+  const handleSelectPreset = async (presetId: string) => {
     const selected = presets.find(p => p.id === presetId);
     if (selected) {
-      setProfile({ ...selected });
+      const updatedProfile = { ...selected };
+      setProfile(updatedProfile);
       setAudioUrl(null);
       setAudioMeta(null);
       setIsPlaying(false);
+
+      // Auto-save to server immediately so Watercooler and Weekly Recap receive it
+      try {
+        setSaveStatus('saving');
+        const res = await fetch('/api/commissioner/tts-profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ profile: updatedProfile }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setSaveStatus('saved');
+          setTimeout(() => setSaveStatus(null), 3500);
+
+          // Update localStorage so Watercooler picks up the matching persona immediately
+          localStorage.setItem('commissioner_active_preset_id', presetId);
+          if (presetId === 'profile-texas-chalk') {
+            localStorage.setItem('watercooler_speaker1_persona', 'rex');
+            localStorage.setItem('watercooler_voice1', 'Charon');
+          } else if (presetId === 'profile-mit-sloan') {
+            localStorage.setItem('watercooler_speaker1_persona', 'chloe');
+            localStorage.setItem('watercooler_voice1', 'Kore');
+          } else if (presetId === 'profile-commish-ruling') {
+            localStorage.setItem('watercooler_speaker1_persona', 'commish');
+            localStorage.setItem('watercooler_voice1', 'Puck');
+          } else if (presetId === 'profile-halsted-war-room') {
+            localStorage.setItem('watercooler_speaker1_persona', 'sal');
+            localStorage.setItem('watercooler_voice1', 'Fenrir');
+          }
+        } else {
+          setSaveStatus('error');
+        }
+      } catch (e) {
+        console.warn('Auto-save preset failed:', e);
+        setSaveStatus('error');
+      }
     }
   };
 
@@ -198,6 +235,17 @@ export const Commissioner: React.FC = () => {
       if (data.success) {
         setSaveStatus('saved');
         setTimeout(() => setSaveStatus(null), 3500);
+        localStorage.setItem('commissioner_active_preset_id', profile.id);
+        if (profile.id === 'profile-texas-chalk' || profile.name?.toLowerCase().includes('texas')) {
+          localStorage.setItem('watercooler_speaker1_persona', 'rex');
+          localStorage.setItem('watercooler_voice1', 'Charon');
+        } else if (profile.id === 'profile-mit-sloan') {
+          localStorage.setItem('watercooler_speaker1_persona', 'chloe');
+          localStorage.setItem('watercooler_voice1', 'Kore');
+        } else if (profile.id === 'profile-commish-ruling') {
+          localStorage.setItem('watercooler_speaker1_persona', 'commish');
+          localStorage.setItem('watercooler_voice1', 'Puck');
+        }
       } else {
         setSaveStatus('error');
       }
@@ -739,6 +787,40 @@ export const Commissioner: React.FC = () => {
                       </span>
                     </div>
 
+                    {/* Persona Presets for Speaker 1 */}
+                    <div className="space-y-1">
+                      <label className="block text-[10px] text-slate-400 uppercase tracking-wider font-mono">
+                        Speaker 1 Persona Presets
+                      </label>
+                      <div className="flex flex-wrap gap-1">
+                        {[
+                          { name: 'Coach Sal', voice: 'Fenrir', role: 'Gruff, passionate South-Side Chicago beef counter legend & 1985 Bears diehard', avatar: '🥩' },
+                          { name: 'Dr. Chloe', voice: 'Kore', role: 'Brilliant MIT Sloan analytics director analyzing EPA/play and win curves', avatar: '📊' },
+                          { name: 'Kev Callahan', voice: 'Puck', role: 'AM 670 Sports Radio screamer meltdown caller shouting over bad beats', avatar: '⚡' },
+                          { name: 'Rex McCoy', voice: 'Zephyr', role: 'Texas football booster with big belt buckle obsessed with arm talent', avatar: '🤠' },
+                          { name: 'Marty Miller', voice: 'Charon', role: 'Grizzled Las Vegas syndicate sharp and closing line oddsmaker', avatar: '🎲' },
+                        ].map(p => (
+                          <button
+                            key={`spk1-p-${p.name}`}
+                            type="button"
+                            onClick={() => {
+                              const updated = [...profile.speakerConfigs];
+                              updated[0] = { ...updated[0], speaker: p.name, voiceName: p.voice, roleContext: p.role };
+                              setProfile({ ...profile, speakerConfigs: updated });
+                            }}
+                            className={`px-2 py-0.5 rounded text-[10px] font-mono border transition flex items-center gap-1 ${
+                              profile.speakerConfigs[0]?.speaker === p.name
+                                ? 'bg-amber-950 border-amber-500 text-amber-300 font-bold'
+                                : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            <span>{p.avatar}</span>
+                            <span>{p.name.split(' ')[0]}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-[11px] text-slate-400 mb-1">Speaker Tag</label>
@@ -800,6 +882,44 @@ export const Commissioner: React.FC = () => {
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono">
                           Dual Dialogue
                         </span>
+                      </div>
+
+                      {/* Persona Presets for Speaker 2 */}
+                      <div className="space-y-1">
+                        <label className="block text-[10px] text-slate-400 uppercase tracking-wider font-mono">
+                          Speaker 2 Persona Presets
+                        </label>
+                        <div className="flex flex-wrap gap-1">
+                          {[
+                            { name: 'Dr. Chloe', voice: 'Kore', role: 'Brilliant MIT Sloan analytics director analyzing EPA/play and win curves', avatar: '📊' },
+                            { name: 'Coach Sal', voice: 'Fenrir', role: 'Gruff, passionate South-Side Chicago beef counter legend & 1985 Bears diehard', avatar: '🥩' },
+                            { name: 'Kev Callahan', voice: 'Puck', role: 'AM 670 Sports Radio screamer meltdown caller shouting over bad beats', avatar: '⚡' },
+                            { name: 'Rex McCoy', voice: 'Zephyr', role: 'Texas football booster with big belt buckle obsessed with arm talent', avatar: '🤠' },
+                            { name: 'Marty Miller', voice: 'Charon', role: 'Grizzled Las Vegas syndicate sharp and closing line oddsmaker', avatar: '🎲' },
+                          ].map(p => (
+                            <button
+                              key={`spk2-p-${p.name}`}
+                              type="button"
+                              onClick={() => {
+                                const updated = [...profile.speakerConfigs];
+                                updated[1] = {
+                                  speaker: p.name,
+                                  voiceName: p.voice,
+                                  roleContext: p.role,
+                                };
+                                setProfile({ ...profile, speakerConfigs: updated });
+                              }}
+                              className={`px-2 py-0.5 rounded text-[10px] font-mono border transition flex items-center gap-1 ${
+                                profile.speakerConfigs[1]?.speaker === p.name
+                                  ? 'bg-cyan-950 border-cyan-500 text-cyan-300 font-bold'
+                                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                              }`}
+                            >
+                              <span>{p.avatar}</span>
+                              <span>{p.name.split(' ')[0]}</span>
+                            </button>
+                          ))}
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">

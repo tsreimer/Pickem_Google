@@ -35,7 +35,9 @@ export const WarRoom: React.FC = () => {
               REDZONE LIVE
             </span>
             <span className="font-mono text-slate-300 font-semibold">
-              {currentWeek === 2
+              {currentWeek === 3
+                ? 'Week 3 Slate • Active Card (16 Matchups Loaded) • Thursday Night Kickoff: ATL @ GB'
+                : currentWeek === 2
                 ? 'Week 2 Slate • Final Standings Verified (All 16 Games Settled) • Champion: Bird Boss (104 pts)'
                 : 'Week 1 Slate • Final Standings • Co-Champions Cory & Dalton (102 pts each, split $25 purse)'}
             </span>
@@ -43,7 +45,9 @@ export const WarRoom: React.FC = () => {
           <div className="font-mono text-[11px] text-red-200 flex items-center gap-2">
             <Radio className="w-3.5 h-3.5 text-red-400 animate-pulse" />
             <span className="font-semibold">
-              {currentWeek === 2
+              {currentWeek === 3
+                ? '🟢 WEEK 3 ACTIVE • 12/12 Manager Cards Ingested • Locks Thu 8:15 PM EDT'
+                : currentWeek === 2
                 ? '🏆 Amy (Bird Boss) wins Week 2 with 104 pts ($25.00 purse) • Shoeman 2nd (99 pts) • Todd 12th (69 pts)'
                 : '🏁 FINAL: Week 1 Settled • No Tiebreakers • Equal Split ($25 purse)'}
             </span>
@@ -126,12 +130,22 @@ export const WarRoom: React.FC = () => {
               onClick={() => setCurrentWeek(2)}
               className={`px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer flex items-center gap-1.5 ${
                 currentWeek === 2
+                  ? 'bg-purple-600 text-white shadow font-black'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Week 2 (Final)
+            </button>
+            <button
+              onClick={() => setCurrentWeek(3)}
+              className={`px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer flex items-center gap-1.5 ${
+                currentWeek === 3
                   ? 'bg-emerald-500 text-black shadow font-black'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-black"></span>
-              Week 2 (Final)
+              <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse"></span>
+              Week 3 (Active)
             </button>
           </div>
 
@@ -320,14 +334,16 @@ export const WarRoom: React.FC = () => {
               Live Pool Standings (Week {currentWeek} Slate)
             </h3>
             <p className="text-xs text-slate-400">
-              {currentWeek === 2
+              {currentWeek === 3
+                ? 'Active slate standings for Week 3 • Verified against Yahoo Group ID# 13003'
+                : currentWeek === 2
                 ? 'Official final standings for Week 2 • Verified against Yahoo Group ID# 13003'
                 : 'Final standings for Week 1 • No tiebreakers • Ties split prize evenly'}
             </p>
           </div>
           <div className="flex items-center gap-2 font-mono text-xs text-slate-400">
-            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span>{currentWeek === 2 ? 'All 16 Games Settled (Week 2 Final)' : 'All 16 Games Settled (Final)'}</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>{currentWeek === 3 ? '16 Games Loaded (Week 3 Active Slate)' : currentWeek === 2 ? 'All 16 Games Settled (Week 2 Final)' : 'All 16 Games Settled (Final)'}</span>
           </div>
         </div>
 

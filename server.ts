@@ -7,7 +7,7 @@ import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import { getPickerAdviceProfile, getPickerSpeakerAdvice } from "./src/data/pickerAdviceData";
 import { getTeamSeasonAccuracy, LEAGUE_SEASON_BENCHMARKS } from "./src/data/seasonAccuracyData";
-import { YAHOO_WEEK_1_PICKS_MATRIX, YAHOO_WEEK_2_PICKS_MATRIX, WEEK_1_TEAMS, WEEK_2_TEAMS } from "./src/data/mockData";
+import { YAHOO_WEEK_1_PICKS_MATRIX, YAHOO_WEEK_2_PICKS_MATRIX, YAHOO_WEEK_3_PICKS_MATRIX, WEEK_1_TEAMS, WEEK_2_TEAMS, WEEK_3_TEAMS } from "./src/data/mockData";
 
 dotenv.config();
 
@@ -186,7 +186,7 @@ app.get("/api/league/week", (req, res) => {
 app.post("/api/league/week", (req, res) => {
   const { week, weekNumber } = req.body || {};
   const targetWeek = Number(week || weekNumber);
-  if (targetWeek && (targetWeek === 1 || targetWeek === 2)) {
+  if (targetWeek && targetWeek >= 1 && targetWeek <= 18) {
     currentActiveLeagueWeek = targetWeek;
   }
   res.json({ success: true, currentWeek: currentActiveLeagueWeek });
@@ -309,11 +309,33 @@ export const INITECH_WEEK_2_GAMES_SCHEDULE = [
   { id: 16, favored: "LAR", spread: 7.5, underdog: "NYG", matchup: "LAR vs NYG", isLocked: true, winner: "LAR" },
 ];
 
+export const INITECH_WEEK_3_GAMES_SCHEDULE = [
+  { id: 1, favored: "GB", spread: 6.0, underdog: "ATL", matchup: "GB vs ATL", isLocked: false },
+  { id: 2, favored: "BUF", spread: 7.0, underdog: "LAC", matchup: "BUF vs LAC", isLocked: false },
+  { id: 3, favored: "CAR", spread: 2.5, underdog: "CLE", matchup: "CAR vs CLE", isLocked: false },
+  { id: 4, favored: "DET", spread: 6.5, underdog: "NYJ", matchup: "DET vs NYJ", isLocked: false },
+  { id: 5, favored: "HOU", spread: 2.5, underdog: "IND", matchup: "HOU vs IND", isLocked: false },
+  { id: 6, favored: "KC", spread: 11.5, underdog: "MIA", matchup: "KC vs MIA", isLocked: false },
+  { id: 7, favored: "NYG", spread: 3.0, underdog: "TEN", matchup: "NYG vs TEN", isLocked: false },
+  { id: 8, favored: "CIN", spread: 3.5, underdog: "PIT", matchup: "CIN vs PIT", isLocked: false },
+  { id: 9, favored: "SEA", spread: 7.0, underdog: "WSH", matchup: "SEA vs WSH", isLocked: false },
+  { id: 10, favored: "JAX", spread: 3.0, underdog: "NE", matchup: "JAX vs NE", isLocked: false },
+  { id: 11, favored: "SF", spread: 8.5, underdog: "ARI", matchup: "SF vs ARI", isLocked: false },
+  { id: 12, favored: "MIN", spread: 1.5, underdog: "TB", matchup: "MIN vs TB", isLocked: false },
+  { id: 13, favored: "BAL", spread: 3.0, underdog: "DAL", matchup: "BAL vs DAL", isLocked: false },
+  { id: 14, favored: "NO", spread: 3.0, underdog: "LV", matchup: "NO vs LV", isLocked: false },
+  { id: 15, favored: "LAR", spread: 2.5, underdog: "DEN", matchup: "LAR vs DEN", isLocked: false },
+  { id: 16, favored: "PHI", spread: 3.5, underdog: "CHI", matchup: "PHI vs CHI", isLocked: false },
+];
+
 export function getScheduleForWeek(week: number) {
-  return Number(week) === 2 ? INITECH_WEEK_2_GAMES_SCHEDULE : INITECH_WEEK_1_GAMES_SCHEDULE;
+  const w = Number(week);
+  if (w === 3) return INITECH_WEEK_3_GAMES_SCHEDULE;
+  if (w === 2) return INITECH_WEEK_2_GAMES_SCHEDULE;
+  return INITECH_WEEK_1_GAMES_SCHEDULE;
 }
 
-let currentActiveLeagueWeek = 2;
+let currentActiveLeagueWeek = 3;
 
 const CSV_HEADER_LINE = "Manager,TeamName,G1_Team,G1_Pts,G2_Team,G2_Pts,G3_Team,G3_Pts,G4_Team,G4_Pts,G5_Team,G5_Pts,G6_Team,G6_Pts,G7_Team,G7_Pts,G8_Team,G8_Pts,G9_Team,G9_Pts,G10_Team,G10_Pts,G11_Team,G11_Pts,G12_Team,G12_Pts,G13_Team,G13_Pts,G14_Team,G14_Pts,G15_Team,G15_Pts,G16_Team,G16_Pts,MNF_Total_Points";
 
@@ -641,13 +663,11 @@ const yahooLockWindows: LockWindowRecord[] = [
     day: "Thursday",
     period: "Evening",
     typicalKickoff: "Thursday 8:15 PM EDT (TNF)",
-    status: "synced",
+    status: "pending",
     gamesCount: 1,
-    gamesList: ["DET @ BUF (Final: BUF 41 - DET 31 • Locked & Ingested)"],
-    lockedAt: "2026-09-17T20:15:00-04:00",
-    syncedAt: "2026-09-17T20:15:09-04:00",
-    lastSyncResult: "Week 2 TNF locked & verified. 12 manager cards ingested: 11 selected BUF, 1 selected DET.",
-    autoSyncTriggered: true,
+    gamesList: ["ATL @ GB (Thu 8:15 PM EDT • Amazon Prime Video)"],
+    lastSyncResult: "Auto-sync armed. Will lock & ingest 12 manager picks at kickoff.",
+    autoSyncTriggered: false,
   },
   {
     id: "sun_morning",
@@ -656,13 +676,21 @@ const yahooLockWindows: LockWindowRecord[] = [
     day: "Sunday",
     period: "Morning",
     typicalKickoff: "Sunday 1:00 PM EDT / 10:00 AM PDT (Early Slate)",
-    status: "synced",
-    gamesCount: 8,
-    gamesList: ["CAR @ ATL (CAR 34-3)", "CHI @ MIN (MIN 9-3)", "PHI @ TEN (PHI 24-20)", "NE @ PIT (NE 20-3)", "GB @ NYJ (GB 20-17 OT)", "TB @ CLE (CLE 23-19)", "BAL @ NO (NO 24-17)", "HOU @ CIN (CIN 20-6)"],
-    lockedAt: "2026-09-20T10:00:00-07:00",
-    syncedAt: "2026-09-20T10:00:14-07:00",
-    lastSyncResult: "Locked & synced: 8 early slate matchups. 96 picks across 12 manager cards revealed.",
-    autoSyncTriggered: true,
+    status: "pending",
+    gamesCount: 9,
+    gamesList: [
+      "LAC @ BUF",
+      "CAR @ CLE",
+      "NYJ @ DET",
+      "HOU @ IND",
+      "KC @ MIA",
+      "TEN @ NYG",
+      "CIN @ PIT",
+      "SEA @ WSH",
+      "NE @ JAX",
+    ],
+    lastSyncResult: "Scheduled for Sunday 1:00 PM EDT kickoff.",
+    autoSyncTriggered: false,
   },
   {
     id: "sun_afternoon",
@@ -671,13 +699,11 @@ const yahooLockWindows: LockWindowRecord[] = [
     day: "Sunday",
     period: "Afternoon",
     typicalKickoff: "Sunday 4:05 / 4:25 PM EDT (Late Slate)",
-    status: "synced",
-    gamesCount: 5,
-    gamesList: ["DEN @ JAX (DEN 20-13)", "LV @ LAC (LV 26-14)", "WSH @ DAL (DAL 37-20)", "SEA @ ARI (SEA 31-7)", "MIA @ SF (SF 35-13)"],
-    lockedAt: "2026-09-20T13:25:00-07:00",
-    syncedAt: "2026-09-20T13:25:21-07:00",
-    lastSyncResult: "Locked & synced: 5 late slate matchups. 60 picks across 12 manager cards revealed.",
-    autoSyncTriggered: true,
+    status: "pending",
+    gamesCount: 4,
+    gamesList: ["ARI @ SF", "MIN @ TB", "BAL @ DAL", "LV @ NO"],
+    lastSyncResult: "Scheduled for Sunday 4:05 PM / 4:25 PM EDT kickoff.",
+    autoSyncTriggered: false,
   },
   {
     id: "sun_evening",
@@ -686,13 +712,11 @@ const yahooLockWindows: LockWindowRecord[] = [
     day: "Sunday",
     period: "Evening",
     typicalKickoff: "Sunday 8:20 PM EDT (SNF)",
-    status: "synced",
+    status: "pending",
     gamesCount: 1,
-    gamesList: ["IND @ KC (KC 33-30 OT)"],
-    lockedAt: "2026-09-20T17:20:00-07:00",
-    syncedAt: "2026-09-20T17:20:08-07:00",
-    lastSyncResult: "Locked & synced: Sunday Night Football. 12 cards revealed.",
-    autoSyncTriggered: true,
+    gamesList: ["LAR @ DEN (Sun 8:20 PM EDT • NBC)"],
+    lastSyncResult: "Scheduled for Sunday Night Football kickoff.",
+    autoSyncTriggered: false,
   },
   {
     id: "mon_evening",
@@ -701,17 +725,26 @@ const yahooLockWindows: LockWindowRecord[] = [
     day: "Monday",
     period: "Evening",
     typicalKickoff: "Monday 8:15 PM EDT (MNF)",
-    status: "synced",
+    status: "pending",
     gamesCount: 1,
-    gamesList: ["NYG @ LAR (LAR 28-6)"],
-    lockedAt: "2026-09-21T17:15:00-07:00",
-    syncedAt: "2026-09-21T17:15:11-07:00",
-    lastSyncResult: "Locked & synced: Monday Night Football. Week 2 final settlement complete (16/16 games).",
-    autoSyncTriggered: true,
+    gamesList: ["PHI @ CHI (Mon 8:15 PM EDT • ESPN)"],
+    lastSyncResult: "Scheduled for Monday Night Football kickoff & final weekly settlement.",
+    autoSyncTriggered: false,
   },
 ];
 
 const syncAuditLogs: SyncAuditEntry[] = [
+  {
+    id: "audit-wk3-init",
+    timestamp: new Date().toISOString(),
+    windowId: "thu_evening",
+    windowName: "Week 3 Transition",
+    status: "success",
+    message: "League ledger successfully transitioned to Week 3. All 16 games loaded. 12 manager cards verified against Yahoo Pick'em Group (ID# 13003). Auto-sync daemon armed for Thursday Evening Lock (ATL @ GB).",
+    gamesLockedCount: 0,
+    revealedPicksCount: 0,
+    triggerSource: "auto_daemon",
+  },
   {
     id: "audit-5",
     timestamp: "2026-09-21T23:45:00-04:00",
@@ -841,8 +874,16 @@ app.post("/api/yahoo/sync-lock-window", (req, res) => {
   const targetId = triggerAll ? undefined : windowId;
   const syncedResults = executeYahooLockSync(targetId, "manual_request");
 
-  const matrix = currentActiveLeagueWeek === 2 ? YAHOO_WEEK_2_PICKS_MATRIX : YAHOO_WEEK_1_PICKS_MATRIX;
-  const teams = currentActiveLeagueWeek === 2 ? WEEK_2_TEAMS : WEEK_1_TEAMS;
+  const matrix = currentActiveLeagueWeek === 3
+    ? YAHOO_WEEK_3_PICKS_MATRIX
+    : currentActiveLeagueWeek === 2
+    ? YAHOO_WEEK_2_PICKS_MATRIX
+    : YAHOO_WEEK_1_PICKS_MATRIX;
+  const teams = currentActiveLeagueWeek === 3
+    ? WEEK_3_TEAMS
+    : currentActiveLeagueWeek === 2
+    ? WEEK_2_TEAMS
+    : WEEK_1_TEAMS;
 
   res.json({
     success: true,
@@ -860,15 +901,23 @@ app.post("/api/yahoo/sync-lock-window", (req, res) => {
 // Endpoint: Get Yahoo picks matrix and teams standings for any week
 app.get("/api/yahoo/matrix", (req, res) => {
   const weekParam = req.query.week ? Number(req.query.week) : currentActiveLeagueWeek;
-  const matrix = weekParam === 2 ? YAHOO_WEEK_2_PICKS_MATRIX : YAHOO_WEEK_1_PICKS_MATRIX;
-  const teams = weekParam === 2 ? WEEK_2_TEAMS : WEEK_1_TEAMS;
+  const matrix = weekParam === 3
+    ? YAHOO_WEEK_3_PICKS_MATRIX
+    : weekParam === 2
+    ? YAHOO_WEEK_2_PICKS_MATRIX
+    : YAHOO_WEEK_1_PICKS_MATRIX;
+  const teams = weekParam === 3
+    ? WEEK_3_TEAMS
+    : weekParam === 2
+    ? WEEK_2_TEAMS
+    : WEEK_1_TEAMS;
   res.json({
     success: true,
     week: weekParam,
     matrix,
     teams,
-    totalGamesSettled: 16,
-    isComplete: true,
+    totalGamesSettled: weekParam === 3 ? 0 : 16,
+    isComplete: weekParam !== 3,
     timestamp: new Date().toISOString(),
   });
 });
@@ -1467,20 +1516,21 @@ const DEFAULT_AUDIO_PROFILES: CommissionerTtsProfile[] = [
   },
   {
     id: "profile-texas-chalk",
-    name: "Texas Big-Chalk Tailgate",
+    name: "Bay Texas Big Chalk Tailgate",
     title: "The Sunday Morning Smoker Session",
     sceneTitle: "Parking Lot 4 Outside AT&T Stadium",
     sceneDescription: "Open smoker billowing hickory wood smoke, cold beverage coolers iced down, country music guitar riffs bouncing off the concrete lot.",
     directorsNotes: {
-      style: "Boisterous, warm, confident Southern drawl with hearty chuckles and big-time swagger.",
+      style: "Boisterous, warm, confident Southern drawl with hearty chuckles, big-time swagger, and unapologetic 16-point chalk betting philosophy.",
       pace: "Laid-back, rolling cadence that kicks into high gear when talking about heavy home favorites.",
-      accent: "Rich Texas drawl with slow vowels and booming laughter."
+      accent: "Rich Texas drawl with slow vowels, hearty belly laughter, and booming resonance."
     },
     sampleContext: "Rex 'The Big Ticket' Vance: Dallas oilman, avid tailgater, and unapologetic 16-point chalk bettor.",
     transcript: "[boisterous laugh] Fire up the smoker boys, it is Sunday in Texas! [pause] You can keep your fancy spreadsheets and MIT computer calculations! [chuckles warmly] When the Cowboys are laying three and a hook at home, you slam sixteen points on the table and you do not look back!",
-    isMultiSpeaker: false,
+    isMultiSpeaker: true,
     speakerConfigs: [
-      { speaker: "Rex Vance", voiceName: "Charon", roleContext: "Dallas oilman, avid tailgater, and unapologetic 16-point chalk bettor" }
+      { speaker: "Rex Vance", voiceName: "Charon", roleContext: "Dallas oilman, avid tailgater, and unapologetic 16-point chalk bettor" },
+      { speaker: "Dr. Chloe", voiceName: "Kore", roleContext: "Sharp, brilliant MIT Sloan sports analytics director" }
     ],
     isPreset: true
   }
@@ -1560,11 +1610,21 @@ app.post("/api/commissioner/tts-profile", (req, res) => {
     ...profile,
     id: profile.id || `profile-custom-${Date.now()}`,
     updatedAt: new Date().toISOString(),
-    isPreset: false
+    isPreset: Boolean(profile.isPreset)
+  };
+
+  // Invalidate cached weekly recap audio so regenerating immediately applies the newly chosen voice & speaker tones!
+  weeklyRecapAudioCache = {
+    hasNeuralAudio: false,
+    audioUrl: undefined,
+    durationSeconds: undefined,
+    modelUsed: undefined,
+    activeProfileId: activeAudioProfile.id,
+    activeProfileName: activeAudioProfile.name
   };
 
   const formattedPayload = formatPromptGuidePayload(activeAudioProfile);
-  console.info(`[Commissioner] Updated active audio profile to: "${activeAudioProfile.name}"`);
+  console.info(`[Commissioner] Updated active audio profile to: "${activeAudioProfile.name}" (Voice: ${activeAudioProfile.speakerConfigs?.[0]?.voiceName || "Default"})`);
 
   res.json({
     success: true,
@@ -1580,6 +1640,14 @@ app.post("/api/commissioner/tts-profile/reset", (req, res) => {
     ...DEFAULT_AUDIO_PROFILES[0],
     updatedAt: new Date().toISOString()
   };
+  weeklyRecapAudioCache = {
+    hasNeuralAudio: false,
+    audioUrl: undefined,
+    durationSeconds: undefined,
+    modelUsed: undefined,
+    activeProfileId: activeAudioProfile.id,
+    activeProfileName: activeAudioProfile.name
+  };
   const formattedPayload = formatPromptGuidePayload(activeAudioProfile);
 
   res.json({
@@ -1592,6 +1660,23 @@ app.post("/api/commissioner/tts-profile/reset", (req, res) => {
 
 // Endpoint: Synthesize Audio Preview using Prompt Guide Format
 app.post("/api/commissioner/tts-profile/preview", async (req, res) => {
+  // If a profile object was sent with the preview, keep activeAudioProfile updated with the previewed settings
+  if (req.body?.profile && typeof req.body.profile === "object") {
+    activeAudioProfile = {
+      ...activeAudioProfile,
+      ...req.body.profile,
+      updatedAt: new Date().toISOString()
+    };
+    weeklyRecapAudioCache = {
+      hasNeuralAudio: false,
+      audioUrl: undefined,
+      durationSeconds: undefined,
+      modelUsed: undefined,
+      activeProfileId: activeAudioProfile.id,
+      activeProfileName: activeAudioProfile.name
+    };
+  }
+
   const profile: CommissionerTtsProfile = req.body?.profile || activeAudioProfile;
   const promptPayload = formatPromptGuidePayload(profile);
   const isMulti = Boolean(profile.isMultiSpeaker && profile.speakerConfigs && profile.speakerConfigs.length >= 2);
@@ -1620,7 +1705,6 @@ app.post("/api/commissioner/tts-profile/preview", async (req, res) => {
         speakerVoiceConfigs
       }
     );
-
     res.json({
       success: true,
       audioUrl: result.audioUrl,
@@ -1741,6 +1825,7 @@ function calculateStrategistBriefingData(teamId: string = "team-todd", speaker: 
     stageDirections: advice.stageDirections,
     script: advice.script,
     tacticalPointers: advice.tacticalPointers,
+    recommendedPicks: profile.recommendedPicks || [],
   };
 }
 
@@ -2082,17 +2167,91 @@ Shoeman absorbed the most devastating blow of the night, forfeiting their #1 six
   ],
 };
 
+const WEEKLY_RECAP_DATA_WK3 = {
+  id: "weekly-recap-wk3",
+  weekNumber: 3,
+  title: "🎙️ Halsted & Ivy: Week 3 Preview & The Green Bay Trap",
+  subtitle: "Coach Sal & Dr. Chloe deconstruct the Week 3 slate, Jordan Love's 6-pt anchor status on TNF, and Todd's triple-anchor strategy.",
+  duration: "02:15",
+  durationSeconds: 135,
+  headline: "Week 3 Kickoff: Clean Slate, Big Spreads, & High-Stakes Anchor Allocation",
+  writtenRecap: `Week 3 of the Initech Invitational is officially underway! With 16 games on the slate, the league faces its first true divisional gauntlet. The action kicks off Thursday Night as Jordan Love and the Green Bay Packers host the Atlanta Falcons at Lambeau Field (-6.0).
+
+With Week 2 in the books and Amy (Bird Boss) taking 1st place with 104 points, all 12 managers reset their confidence cards. Buffalo (-7.0 vs LAC), Kansas City (-11.5 vs MIA), and San Francisco (-8.5 vs ARI) represent the heaviest chalk on the board. Dr. Chloe's Monte Carlo simulation highlights the critical pivot: do you spend your 16-point anchor on heavy road favorites or save them for home divisional locks? Todd Reimer enters Week 3 targeting high leverage in the Sunday afternoon window.`,
+  keyTakeaways: [
+    { label: "TNF Lock", text: "Green Bay (-6.0 vs ATL) locks Thursday 8:15 PM EDT across all 12 manager rosters." },
+    { label: "Apex Chalk", text: "KC (-11.5 vs MIA) and SF (-8.5 vs ARI) dominate top-3 anchor selections." },
+    { label: "Trap Alert", text: "Dr. Chloe warns that 7-point road chalk historically covers at only 47% in Week 3." },
+    { label: "Rebound Path", text: "Todd Reimer and Shoeman reset their cards targeting maximum survivor equity." },
+  ],
+  speakers: [
+    {
+      id: "sal",
+      name: "Coach Sal",
+      title: 'Coach Sal "Da Bear" Ditkofsky',
+      voiceName: "Fenrir",
+      avatar: "🥩",
+      role: "Bridgeport Beef Proprietor & Ditka Disciple",
+    },
+    {
+      id: "chloe",
+      name: "Dr. Chloe",
+      title: 'Dr. Chloe "The Algorithm" Vance',
+      voiceName: "Kore",
+      avatar: "📊",
+      role: "MIT Sloan Sports Analytics Director",
+    },
+  ],
+  scriptText:
+    "Sal: [slaps laminate table] Good evening, Chicago gridiron faithful! Dis is Coach Sal comin' to ya live from Vito & Sal's Beef on 35th and Halsted! Turn the page, baby! Week 2 is in the books—congrats to Amy, da Bird Boss, cashing that twenty-five buck purse—and now we are lookin' at Week 3! Chloe, Lambeau Field, Thursday Night Football, Green Bay minus six against Atlanta! Are you buying Jordan Love or what?!\nChloe: [sips matcha latte] Mathematically, Sal, Green Bay at minus six at home has an implied win probability of seventy-one point four percent. However, my regression models indicate that high-spread home favorites on short rest underperform against the spread. But in a straight-up confidence pool, eleven out of our twelve Initech managers have locked Green Bay as a top-eight anchor.\nSal: That's because you don't bet against the frozen tundra on a crisp September evening! But look at Kansas City minus eleven and a half against Miami! Eleven and a half! Is that where people should put their sixteen-point anchor?!\nChloe: Absolutely. Kansas City at home against a Miami defense allowing five point eight yards per play offers the lowest variance on the entire Week 3 card. That is the consensus sixteen-point anchor. But the real game-theory edge, Sal, is in the Sunday afternoon window: Baltimore at Dallas. That spread is three points. Managers who correctly identify the winner there will leapfrog the field.\nSal: That's right! Put your beef on the line! Load up your anchors, get your picks in on Yahoo before Thursday kickoff, and let's have ourselves a Week Three!",
+  dialogueTurns: [
+    {
+      speaker: "Sal",
+      text: "[slaps laminate table] Good evening, Chicago gridiron faithful! Dis is Coach Sal comin' to ya live from Vito & Sal's Beef on 35th and Halsted! Turn the page, baby! Week 2 is in the books—congrats to Amy, da Bird Boss, cashing that twenty-five buck purse—and now we are lookin' at Week 3! Chloe, Lambeau Field, Thursday Night Football, Green Bay minus six against Atlanta! Are you buying Jordan Love or what?!",
+      stageDirection: "slaps table, booming Ditka gravelly baritone",
+    },
+    {
+      speaker: "Chloe",
+      text: "[sips matcha latte] Mathematically, Sal, Green Bay at minus six at home has an implied win probability of seventy-one point four percent. However, my regression models indicate that high-spread home favorites on short rest underperform against the spread. But in a straight-up confidence pool, eleven out of our twelve Initech managers have locked Green Bay as a top-eight anchor.",
+      stageDirection: "sips matcha, crisp, sharp, fast analytical cadence",
+    },
+    {
+      speaker: "Sal",
+      text: "That's because you don't bet against the frozen tundra on a crisp September evening! But look at Kansas City minus eleven and a half against Miami! Eleven and a half! Is that where people should put their sixteen-point anchor?!",
+      stageDirection: "scoffs in disbelief, shouts passionately",
+    },
+    {
+      speaker: "Chloe",
+      text: "Absolutely. Kansas City at home against a Miami defense allowing five point eight yards per play offers the lowest variance on the entire Week 3 card. That is the consensus sixteen-point anchor. But the real game-theory edge, Sal, is in the Sunday afternoon window: Baltimore at Dallas. That spread is three points. Managers who correctly identify the winner there will leapfrog the field.",
+      stageDirection: "authoritative and confident NextGen analysis",
+    },
+    {
+      speaker: "Sal",
+      text: "That's right! Put your beef on the line! Load up your anchors, get your picks in on Yahoo before Thursday kickoff, and let's have ourselves a Week Three!",
+      stageDirection: "triumphant roar, counter slap",
+    },
+  ],
+};
+
 // In-memory or pre-cached weekly recap audio storage
 let weeklyRecapAudioCache: {
   audioUrl: string | null;
   durationSeconds: number;
   modelUsed: string;
   hasNeuralAudio: boolean;
+  activeProfileId?: string;
+  activeProfileName?: string;
+  primaryVoice?: string;
+  primarySpeaker?: string;
 } = {
   audioUrl: null,
   durationSeconds: 132,
   modelUsed: "gemini-3.1-flash-tts-preview",
   hasNeuralAudio: false,
+  activeProfileId: "profile-halsted-war-room",
+  activeProfileName: "Halsted & Ivy Gridiron War Room",
+  primaryVoice: "Fenrir",
+  primarySpeaker: "Coach Sal",
 };
 
 // Check if pre-cached multi-speaker radio show exists in ttsAudioCache on startup
@@ -2103,6 +2262,10 @@ for (const [key, val] of ttsAudioCache.entries()) {
       durationSeconds: val.durationSeconds || 132,
       modelUsed: val.modelUsed || "gemini-3.1-flash-tts-preview",
       hasNeuralAudio: true,
+      activeProfileId: "profile-halsted-war-room",
+      activeProfileName: "Halsted & Ivy Gridiron War Room",
+      primaryVoice: "Fenrir",
+      primarySpeaker: "Coach Sal",
     };
     console.log("[AudioCache] Linked pre-cached neural audio for Weekly Recap Radio Show (Halsted & Ivy, 132s).");
     break;
@@ -2112,9 +2275,138 @@ for (const [key, val] of ttsAudioCache.entries()) {
 // Endpoint: Get Weekly Recap Metadata and Cached Audio
 app.get("/api/audio/weekly-recap", (req, res) => {
   const isCooldown = Date.now() < ttsQuotaCooldownUntil;
+  const requestedWeek = req.query.week ? Number(req.query.week) : currentActiveLeagueWeek;
+  const selectedData = requestedWeek === 3 ? WEEKLY_RECAP_DATA_WK3 : WEEKLY_RECAP_DATA;
+
+  // Resolve active host info from activeAudioProfile
+  const isTexasProfile = activeAudioProfile.id === 'profile-texas-chalk' || activeAudioProfile.name?.toLowerCase().includes('texas');
+  const isMitProfile = activeAudioProfile.id === 'profile-mit-sloan' || activeAudioProfile.name?.toLowerCase().includes('mit');
+  const isCommishProfile = activeAudioProfile.id === 'profile-commish-ruling' || activeAudioProfile.name?.toLowerCase().includes('commish');
+
+  let dynamicData = { ...selectedData };
+  if (isTexasProfile) {
+    dynamicData = {
+      ...selectedData,
+      title: `🎙️ The Big-Chalk Smoker: Week ${requestedWeek} Preview & Strategy — Rex Vance & Dr. Chloe`,
+      subtitle: `Rex Vance & Dr. Chloe Vance deconstruct the Week ${requestedWeek} slate, 16-point chalk anchors, and AT&T Stadium tailgate leverage.`,
+      headline: "Texas Big-Chalk Tailgate: Slam Your 16-Point Anchors & Smoke the Competition",
+      speakers: [
+        {
+          id: "rex",
+          name: "Rex Vance",
+          title: 'Rex "Big Chalk" Vance',
+          voiceName: activeAudioProfile.speakerConfigs?.[0]?.voiceName || "Charon",
+          avatar: "🤠",
+          role: "AT&T Stadium Smoker Master & 16-Pt Chalk Bettor",
+        },
+        {
+          id: "chloe",
+          name: "Dr. Chloe",
+          title: 'Dr. Chloe "The Algorithm" Vance',
+          voiceName: activeAudioProfile.speakerConfigs?.[1]?.voiceName || "Kore",
+          avatar: "📊",
+          role: "MIT Sloan Sports Analytics Director",
+        },
+      ],
+      scriptText: `Rex: [boisterous laugh] Fire up the smoker, boys, it's Week Three in Texas! Rex Vance here with the Sunday morning tailgate dispatch! Congrats to Amy, the Bird Boss, cashing that twenty-five dollar purse in Week Two! Now we got Green Bay hosting Atlanta on Thursday night! Chloe, what does your fancy MIT spreadsheet say about Jordan Love laying six points at Lambeau?!
+Chloe: [crisp analytical tone] Mathematically, Rex, Green Bay at minus six at home has an implied win probability of seventy-one point four percent. However, my regression models indicate that high-spread home favorites on short rest underperform against the spread. But in a straight-up confidence pool, eleven out of our twelve Initech managers have locked Green Bay as a top-eight anchor.
+Rex: [hearty chuckle] That's because you don't bet against Lambeau Field on a crisp September evening! But look at Kansas City minus eleven and a half against Miami! Eleven and a half! Is that where people should slam their sixteen-point anchor?!
+Chloe: Absolutely, Rex. Kansas City at home against a Miami defense allowing five point eight yards per play offers the lowest variance on the entire Week Three card. That is the consensus sixteen-point anchor. But the real game-theory edge is Baltimore at Dallas: spread is three points. Managers who correctly identify the winner there will leapfrog the field.
+Rex: [boisterous belly laugh] Dallas at home, baby! Put your beef on the line! Load up your anchors, get your picks in on Yahoo before Thursday kickoff, and let's have ourselves a Week Three!`,
+      dialogueTurns: [
+        {
+          speaker: "Rex",
+          text: "[boisterous laugh] Fire up the smoker, boys, it's Week Three in Texas! Rex Vance here with the Sunday morning tailgate dispatch! Congrats to Amy, the Bird Boss, cashing that twenty-five dollar purse in Week Two! Now we got Green Bay hosting Atlanta on Thursday night! Chloe, what does your fancy MIT spreadsheet say about Jordan Love laying six points at Lambeau?!",
+          stageDirection: "boisterous laugh, hearty Southern drawl",
+        },
+        {
+          speaker: "Chloe",
+          text: "[crisp analytical tone] Mathematically, Rex, Green Bay at minus six at home has an implied win probability of seventy-one point four percent. However, my regression models indicate that high-spread home favorites on short rest underperform against the spread. But in a straight-up confidence pool, eleven out of our twelve Initech managers have locked Green Bay as a top-eight anchor.",
+          stageDirection: "crisp, sharp, fast analytical cadence",
+        },
+        {
+          speaker: "Rex",
+          text: "[hearty chuckle] That's because you don't bet against Lambeau Field on a crisp September evening! But look at Kansas City minus eleven and a half against Miami! Eleven and a half! Is that where people should slam their sixteen-point anchor?!",
+          stageDirection: "hearty chuckle, boisterous Southern drawl",
+        },
+        {
+          speaker: "Chloe",
+          text: "Absolutely, Rex. Kansas City at home against a Miami defense allowing five point eight yards per play offers the lowest variance on the entire Week Three card. That is the consensus sixteen-point anchor. But the real game-theory edge is Baltimore at Dallas: spread is three points. Managers who correctly identify the winner there will leapfrog the field.",
+          stageDirection: "authoritative and confident NextGen analysis",
+        },
+        {
+          speaker: "Rex",
+          text: "[boisterous belly laugh] Dallas at home, baby! Put your beef on the line! Load up your anchors, get your picks in on Yahoo before Thursday kickoff, and let's have ourselves a Week Three!",
+          stageDirection: "boisterous belly laugh, triumphant",
+        },
+      ],
+    };
+  } else if (isMitProfile) {
+    dynamicData = {
+      ...selectedData,
+      title: `🎙️ MIT Sloan Quantitative Audit: Week ${requestedWeek} — Dr. Chloe & Coach Sal`,
+      headline: "Quantitative Confidence Matrix: Bayesian Analysis & Portfolio Edge",
+      speakers: [
+        {
+          id: "chloe",
+          name: "Dr. Chloe",
+          title: 'Dr. Chloe "The Algorithm" Vance',
+          voiceName: activeAudioProfile.speakerConfigs?.[0]?.voiceName || "Kore",
+          avatar: "📊",
+          role: "MIT Sloan Sports Analytics Director",
+        },
+        {
+          id: "sal",
+          name: "Coach Sal",
+          title: 'Coach Sal "Da Bear" Ditkofsky',
+          voiceName: activeAudioProfile.speakerConfigs?.[1]?.voiceName || "Fenrir",
+          avatar: "🥩",
+          role: "Senior Gridiron Strategist",
+        },
+      ],
+    };
+  } else if (isCommishProfile) {
+    dynamicData = {
+      ...selectedData,
+      title: `🎙️ The High Table: Week ${requestedWeek} Official Ruling — The Commish`,
+      headline: "Commissioner's Executive Order: Yahoo Lock Deadlines & Audit Directives",
+      speakers: [
+        {
+          id: "commish",
+          name: "The Commish",
+          title: "The Commish AI",
+          voiceName: activeAudioProfile.speakerConfigs?.[0]?.voiceName || "Puck",
+          avatar: "⚖️",
+          role: "League Rules & Constitution Custodian",
+        },
+        {
+          id: "chloe",
+          name: "Dr. Chloe",
+          title: 'Dr. Chloe "The Algorithm" Vance',
+          voiceName: activeAudioProfile.speakerConfigs?.[1]?.voiceName || "Kore",
+          avatar: "📊",
+          role: "MIT Sloan Sports Analytics Director",
+        },
+      ],
+    };
+  }
+
+  const primaryHostSpeaker = activeAudioProfile.speakerConfigs?.[0]?.speaker || (isTexasProfile ? "Rex Vance" : "Coach Sal");
+  const primaryHostVoice = activeAudioProfile.speakerConfigs?.[0]?.voiceName || (isTexasProfile ? "Charon" : "Fenrir");
+
   res.json({
     success: true,
-    data: WEEKLY_RECAP_DATA,
+    data: dynamicData,
+    activeAudioProfile: {
+      id: activeAudioProfile.id,
+      name: activeAudioProfile.name,
+      title: activeAudioProfile.title,
+      primarySpeaker: primaryHostSpeaker,
+      primaryVoice: primaryHostVoice,
+      style: activeAudioProfile.directorsNotes.style,
+      sceneTitle: activeAudioProfile.sceneTitle,
+      sceneDescription: activeAudioProfile.sceneDescription,
+    },
     audio: {
       hasNeuralAudio: weeklyRecapAudioCache.hasNeuralAudio,
       audioUrl: weeklyRecapAudioCache.audioUrl,
@@ -2123,6 +2415,10 @@ app.get("/api/audio/weekly-recap", (req, res) => {
       fallbackToSpeechSynthesis: !weeklyRecapAudioCache.hasNeuralAudio,
       quotaExceeded: isCooldown,
       cooldownRemainingSeconds: isCooldown ? Math.max(1, Math.ceil((ttsQuotaCooldownUntil - Date.now()) / 1000)) : 0,
+      activeProfileId: weeklyRecapAudioCache.activeProfileId,
+      activeProfileName: weeklyRecapAudioCache.activeProfileName,
+      primaryVoice: weeklyRecapAudioCache.primaryVoice || primaryHostVoice,
+      primarySpeaker: weeklyRecapAudioCache.primarySpeaker || primaryHostSpeaker,
     },
   });
 });
@@ -2130,7 +2426,12 @@ app.get("/api/audio/weekly-recap", (req, res) => {
 // Endpoint: Explicitly synthesize / regenerate the weekly recap with Gemini TTS
 app.post("/api/audio/weekly-recap/synthesize", async (req, res) => {
   const force = Boolean(req.body?.force);
-  if (weeklyRecapAudioCache.hasNeuralAudio && weeklyRecapAudioCache.audioUrl && !force) {
+  const requestedWeek = req.body?.weekNumber ? Number(req.body?.weekNumber) : currentActiveLeagueWeek;
+  const isWk3 = requestedWeek === 3 || currentActiveLeagueWeek === 3;
+
+  // Check if existing cache matches active profile and is valid
+  const cacheMatchesProfile = weeklyRecapAudioCache.activeProfileId === activeAudioProfile.id;
+  if (weeklyRecapAudioCache.hasNeuralAudio && weeklyRecapAudioCache.audioUrl && !force && cacheMatchesProfile) {
     return res.json({
       success: true,
       cached: true,
@@ -2138,6 +2439,9 @@ app.post("/api/audio/weekly-recap/synthesize", async (req, res) => {
       audioUrl: weeklyRecapAudioCache.audioUrl,
       durationSeconds: weeklyRecapAudioCache.durationSeconds,
       modelUsed: weeklyRecapAudioCache.modelUsed,
+      activeProfileId: weeklyRecapAudioCache.activeProfileId,
+      primaryVoice: weeklyRecapAudioCache.primaryVoice,
+      primarySpeaker: weeklyRecapAudioCache.primarySpeaker,
     });
   }
 
@@ -2155,20 +2459,59 @@ app.post("/api/audio/weekly-recap/synthesize", async (req, res) => {
     });
   }
 
+  // Determine host and co-host based on activeAudioProfile
+  const isTexasProfile = activeAudioProfile.id === 'profile-texas-chalk' || activeAudioProfile.name?.toLowerCase().includes('texas');
+  const isMitProfile = activeAudioProfile.id === 'profile-mit-sloan' || activeAudioProfile.name?.toLowerCase().includes('mit');
+  const isCommishProfile = activeAudioProfile.id === 'profile-commish-ruling' || activeAudioProfile.name?.toLowerCase().includes('commish');
+
+  let primaryHostName = activeAudioProfile.speakerConfigs?.[0]?.speaker || (isTexasProfile ? "Rex Vance" : "Coach Sal");
+  let primaryVoice = activeAudioProfile.speakerConfigs?.[0]?.voiceName || (isTexasProfile ? "Charon" : isMitProfile ? "Kore" : isCommishProfile ? "Puck" : "Fenrir");
+  let secondaryHostName = activeAudioProfile.speakerConfigs?.[1]?.speaker || (isMitProfile ? "Coach Sal" : "Dr. Chloe");
+  let secondaryVoice = activeAudioProfile.speakerConfigs?.[1]?.voiceName || (isMitProfile ? "Fenrir" : "Kore");
+
+  let recapScriptText = (isWk3 ? WEEKLY_RECAP_DATA_WK3.scriptText : WEEKLY_RECAP_DATA.scriptText);
+  let directorsNotes = `${activeAudioProfile.directorsNotes.style} Pace: ${activeAudioProfile.directorsNotes.pace} Accent: ${activeAudioProfile.directorsNotes.accent}.`;
+  let sceneBackstory = activeAudioProfile.sceneDescription || DEFAULT_CHICAGO_SCENE;
+
+  if (isTexasProfile) {
+    primaryHostName = "Rex Vance";
+    primaryVoice = primaryVoice || "Charon";
+    recapScriptText = `Rex: [boisterous laugh] Fire up the smoker, boys, it's Week Three in Texas! Rex Vance here with the Sunday morning tailgate dispatch! Congrats to Amy, the Bird Boss, cashing that twenty-five dollar purse in Week Two! Now we got Green Bay hosting Atlanta on Thursday night! Chloe, what does your fancy MIT spreadsheet say about Jordan Love laying six points at Lambeau?!
+Chloe: [crisp analytical tone] Mathematically, Rex, Green Bay at minus six at home has an implied win probability of seventy-one point four percent. However, my regression models indicate that high-spread home favorites on short rest underperform against the spread. But in a straight-up confidence pool, eleven out of our twelve Initech managers have locked Green Bay as a top-eight anchor.
+Rex: [hearty chuckle] That's because you don't bet against Lambeau Field on a crisp September evening! But look at Kansas City minus eleven and a half against Miami! Eleven and a half! Is that where people should slam their sixteen-point anchor?!
+Chloe: Absolutely, Rex. Kansas City at home against a Miami defense allowing five point eight yards per play offers the lowest variance on the entire Week Three card. That is the consensus sixteen-point anchor. But the real game-theory edge is Baltimore at Dallas: spread is three points. Managers who correctly identify the winner there will leapfrog the field.
+Rex: [boisterous belly laugh] Dallas at home, baby! Put your beef on the line! Load up your anchors, get your picks in on Yahoo before Thursday kickoff, and let's have ourselves a Week Three!`;
+  } else if (isMitProfile) {
+    primaryHostName = "Dr. Chloe";
+    primaryVoice = primaryVoice || "Kore";
+    secondaryHostName = "Coach Sal";
+    secondaryVoice = secondaryVoice || "Fenrir";
+    recapScriptText = `Chloe: [crisp analytical tone] Welcome to the Week Three Initech Quantitative Confidence Audit. Dr. Chloe Vance here at the Kendall Square terminal. Amy, the Bird Boss, captured Week Two with an EPA-optimal 104 points. Looking ahead to Week Three, our priority regression centers on Green Bay minus six versus Atlanta. Sal, how are managers handling the variance?
+Sal: [clears throat] [booming Ditka baritone] Intangibles, Chloe! Lambeau Field on Thursday night! Eleven of our twelve pool managers slammed top-eight anchors on Green Bay! And Kansas City minus eleven and a half against Miami is the chalk lock of the century!
+Chloe: The math corroborates Kansas City as the lowest-variance sixteen-point anchor on the board. However, our Monte Carlo models project maximum leverage on Baltimore at Dallas. Identifying the three-point spread winner there provides an eighty-four percent probability surge in season equity.
+Sal: [chuckles warmly] Lock in dem anchors and ride da chalk to victory!`;
+  } else if (isCommishProfile) {
+    primaryHostName = "The Commish";
+    primaryVoice = primaryVoice || "Puck";
+    recapScriptText = `The Commish: [deadpan] Official memorandum from the Commissioner's High Table. Week Two payouts have been finalized: Amy, the Bird Boss, is confirmed Champion at 104 points. Week Three Yahoo lock windows are active. Chloe, brief the league on the anchor exposure.
+Chloe: [crisp analytical tone] Understood, Commissioner. Eleven of twelve managers have concentrated top confidence points on Green Bay minus six and Kansas City minus eleven and a half. The pivotal leverage battleground is Dallas versus Baltimore.
+The Commish: [deadpan] [pause] Make your picks before Thursday kickoff. Failure to submit locks before Yahoo deadline will result in automatic zero allocations with zero appeals. Meeting adjourned.`;
+  }
+
   try {
     const result = await synthesizeSpeechWithGemini(
-      WEEKLY_RECAP_DATA.scriptText,
-      "Fenrir",
-      DEFAULT_CHICAGO_DIRECTORS_NOTES,
+      recapScriptText,
+      primaryVoice,
+      directorsNotes,
       {
         isMultiSpeaker: true,
         speakerVoiceConfigs: [
-          { speaker: "Sal", voiceName: "Fenrir" },
-          { speaker: "Chloe", voiceName: "Kore" },
+          { speaker: primaryHostName, voiceName: primaryVoice },
+          { speaker: secondaryHostName, voiceName: secondaryVoice },
         ],
-        characterPersona: `${DEFAULT_CHICAGO_PERSONA} & ${DEFAULT_CHLOE_PERSONA}`,
-        sceneBackstory: DEFAULT_CHICAGO_SCENE,
-        directorsNotes: DEFAULT_CHICAGO_DIRECTORS_NOTES,
+        characterPersona: `${primaryHostName} and ${secondaryHostName}`,
+        sceneBackstory: sceneBackstory,
+        directorsNotes: `${directorsNotes} Host 1 speaks as ${primaryHostName} (${primaryVoice}). Host 2 speaks as ${secondaryHostName} (${secondaryVoice}).`,
       }
     );
 
@@ -2177,6 +2520,10 @@ app.post("/api/audio/weekly-recap/synthesize", async (req, res) => {
       durationSeconds: result.durationSeconds || 94,
       modelUsed: result.modelUsed || "gemini-3.1-flash-tts-preview",
       hasNeuralAudio: true,
+      activeProfileId: activeAudioProfile.id,
+      activeProfileName: activeAudioProfile.name,
+      primaryVoice,
+      primarySpeaker: primaryHostName,
     };
 
     res.json({
@@ -2186,6 +2533,9 @@ app.post("/api/audio/weekly-recap/synthesize", async (req, res) => {
       audioUrl: result.audioUrl,
       durationSeconds: result.durationSeconds,
       modelUsed: result.modelUsed,
+      activeProfileId: activeAudioProfile.id,
+      primaryVoice,
+      primarySpeaker: primaryHostName,
     });
   } catch (err: any) {
     const isQuota = Date.now() < ttsQuotaCooldownUntil;
@@ -2249,17 +2599,35 @@ function getBroadcastPersona(personaId: string, customVoice?: string): Broadcast
         promptBio: "A caffeinated, rapid-fire AM 670 sports radio screamer who had heavy confidence on the game, screams about blown picks, interrupts frantically, and demands every coach get fired immediately.",
       };
     case "rex":
+    case "rex vance":
+    case "texas":
+    case "profile-texas-chalk":
       return {
         id: "rex",
-        name: "Rex",
-        title: 'Rex "Big Gunslinger" McCoy',
-        role: "Texas Quarterback Booster with Big Belt Buckle",
-        voiceName: customVoice || "Zephyr",
+        name: "Rex Vance",
+        title: 'Rex "Big Chalk" Vance',
+        role: "Texas Oilman, AT&T Stadium Smoker Master & 16-Pt Chalk Bettor",
+        voiceName: customVoice || "Charon",
         color: "#8B5CF6",
         avatar: "🤠",
-        tagline: "If your quarterback can't throw a strawberry through a battleship, bench him!",
-        archetype: "Southern Arm-Talent Evangelist",
-        promptBio: "A big-talking Texas football booster with an enormous belt buckle who only cares about raw arm talent, deep 60-yard post routes, and big stadium tailgates, laughing boisterously at cold-weather trench football.",
+        tagline: "Fire up the smoker! When the Cowboys are laying points at home, slam sixteen on the table!",
+        archetype: "Texas Big-Chalk Tailgate",
+        promptBio: "Rex Vance: A boisterous Dallas oilman and hardcore tailgater outside AT&T Stadium. Speaks with a warm, hearty Southern drawl, bursts into booming laughter, loves slamming 16-point anchors on heavy favorites, scoffs at overthinking, and smells like hickory wood smoke.",
+      };
+    case "commish":
+    case "the commish":
+    case "profile-commish-ruling":
+      return {
+        id: "commish",
+        name: "The Commish",
+        title: 'The Commissioner',
+        role: "Official Custodian of the Initech Invitational Constitution",
+        voiceName: customVoice || "Puck",
+        color: "#6366F1",
+        avatar: "⚖️",
+        tagline: "Retroactive complaints regarding missed locks will be archived directly in the shredder.",
+        archetype: "High Table Executive Ruling",
+        promptBio: "The Commish: Uncompromising, dry-witted league commissioner. Delivers official league rulings in a deadpan, formal executive baritone with pregnant pauses and zero tolerance for whining.",
       };
     case "marty":
       return {
@@ -2301,30 +2669,117 @@ app.post("/api/broadcast/generate", async (req, res) => {
     margin = 3,
     speaker1Voice,
     speaker2Voice,
-    speaker1Persona = "sal",
+    speaker1Persona,
     speaker2Persona,
     cohostArchetype = "chloe",
     debateCadence = "Rapid-Fire Crosstalk & Gridiron Debate",
     cadencePrompt = "",
     stylePrompt = "",
+    activeProfileId = "",
   } = req.body;
 
+  // Check if activeAudioProfile or request specifies Texas, MIT, or Commish
+  const isTexasActive = Boolean(
+    (activeProfileId && (activeProfileId === 'profile-texas-chalk' || activeProfileId.toLowerCase().includes('texas'))) ||
+    speaker1Persona === 'rex' ||
+    (activeAudioProfile.id === 'profile-texas-chalk' || activeAudioProfile.name?.toLowerCase().includes('texas'))
+  );
+  const isMitActive = Boolean(
+    (activeProfileId && (activeProfileId === 'profile-mit-sloan' || activeProfileId.toLowerCase().includes('mit'))) ||
+    speaker1Persona === 'chloe' ||
+    (!isTexasActive && (activeAudioProfile.id === 'profile-mit-sloan' || activeAudioProfile.name?.toLowerCase().includes('mit')))
+  );
+  const isCommishActive = Boolean(
+    (activeProfileId && (activeProfileId === 'profile-commish-ruling' || activeProfileId.toLowerCase().includes('commish'))) ||
+    speaker1Persona === 'commish' ||
+    (!isTexasActive && !isMitActive && (activeAudioProfile.id === 'profile-commish-ruling' || activeAudioProfile.name?.toLowerCase().includes('commish')))
+  );
+
+  let resolvedSpeaker1Persona = speaker1Persona;
+  let resolvedSpeaker1Voice = speaker1Voice;
+
+  if (isTexasActive) {
+    if (!speaker1Persona || speaker1Persona === 'sal' || speaker1Persona === 'rex') {
+      resolvedSpeaker1Persona = 'rex';
+      resolvedSpeaker1Voice = speaker1Voice && speaker1Voice !== 'Fenrir' ? speaker1Voice : (activeAudioProfile.speakerConfigs?.[0]?.voiceName || 'Charon');
+    }
+  } else if (isMitActive) {
+    if (!speaker1Persona || speaker1Persona === 'sal' || speaker1Persona === 'chloe') {
+      resolvedSpeaker1Persona = 'chloe';
+      resolvedSpeaker1Voice = speaker1Voice && speaker1Voice !== 'Fenrir' ? speaker1Voice : (activeAudioProfile.speakerConfigs?.[0]?.voiceName || 'Kore');
+    }
+  } else if (isCommishActive) {
+    if (!speaker1Persona || speaker1Persona === 'sal' || speaker1Persona === 'commish') {
+      resolvedSpeaker1Persona = 'commish';
+      resolvedSpeaker1Voice = speaker1Voice && speaker1Voice !== 'Fenrir' ? speaker1Voice : (activeAudioProfile.speakerConfigs?.[0]?.voiceName || 'Puck');
+    }
+  } else {
+    resolvedSpeaker1Persona = speaker1Persona || 'sal';
+    resolvedSpeaker1Voice = speaker1Voice || 'Fenrir';
+  }
+
   // Speaker metadata definition based on selected personas
-  const speaker1Meta = getBroadcastPersona(speaker1Persona, speaker1Voice);
+  const speaker1Meta = getBroadcastPersona(resolvedSpeaker1Persona, resolvedSpeaker1Voice);
   let speaker2Meta = getBroadcastPersona(speaker2Persona || cohostArchetype, speaker2Voice);
 
   // If both personas happen to be the exact same, ensure speaker names are unique for dialogue turns
   if (speaker1Meta.name === speaker2Meta.name) {
-    speaker2Meta = {
-      ...speaker2Meta,
-      name: `${speaker2Meta.name} (Co-Host)`,
-    };
+    speaker2Meta = speaker1Meta.id === "chloe"
+      ? getBroadcastPersona("sal", speaker2Voice || "Fenrir")
+      : getBroadcastPersona("chloe", speaker2Voice || "Kore");
   }
 
-  const activeCadence = cadencePrompt || stylePrompt || debateCadence || "Fast-paced, heated sports talk show debate";
+  // Dynamic show title, setting, and cadence
+  let showTitle = "Halsted & Ivy: The Gridiron Dispute";
+  let showSetting = "Vito & Sal's Italian Beef on 35th and Halsted in Bridgeport, Chicago";
+  let showSceneBackstory = "Corner laminate booth at Vito & Sal's Italian Beef on 35th & Halsted, Chicago. Steam hissing off the au jus vat, neon Old Style clock buzzing.";
+  let activeCadence = cadencePrompt || stylePrompt || debateCadence || "Fast-paced, heated sports talk show debate";
+
+  if (speaker1Meta.id === "rex" || isTexasActive) {
+    showTitle = "The Big-Chalk Smoker: Texas Tailgate Radio";
+    showSetting = activeAudioProfile.sceneTitle || "Parking Lot 4 Outside AT&T Stadium in Arlington, Texas";
+    showSceneBackstory = activeAudioProfile.sceneDescription || "Open smoker billowing hickory wood smoke, cold beverage coolers iced down, country music guitar riffs bouncing off the concrete lot.";
+    activeCadence = cadencePrompt || stylePrompt || activeAudioProfile.directorsNotes.style || "Boisterous, warm, confident Southern drawl with hearty chuckles and big-time swagger.";
+  } else if (speaker1Meta.id === "commish" || isCommishActive) {
+    showTitle = "The High Table: Commissioner's League Ruling";
+    showSetting = activeAudioProfile.sceneTitle || "The High Table Boardroom, Initech Tower Suite 400";
+    showSceneBackstory = activeAudioProfile.sceneDescription || "Mahogany-paneled boardroom overlooking the city skyline, leather-bound league constitution open on the desk, bronze gavel resting on the ledger.";
+    activeCadence = cadencePrompt || stylePrompt || activeAudioProfile.directorsNotes.style || "Solemn, deadpan executive authority with dry corporate humor.";
+  } else if (speaker1Meta.id === "chloe" || isMitActive) {
+    showTitle = "The Quantitative Edge: MIT Sloan Confidence Audit";
+    showSetting = activeAudioProfile.sceneTitle || "Glass Analytics Lab at Kendall Square, Cambridge, MA";
+    showSceneBackstory = activeAudioProfile.sceneDescription || "High-tech terminal room with multi-screen monitors displaying live closing line value delta charts and Monte Carlo probability distributions.";
+    activeCadence = cadencePrompt || stylePrompt || activeAudioProfile.directorsNotes.style || "Crisp, precise, highly articulate quantitative delivery with razor-sharp analytical authority.";
+  }
 
   // Fallback multi-speaker talk show dialogue matched to archetype with pure vocal tags for Gemini Flash TTS
-  let fallbackDialogueTurns = [
+  let fallbackDialogueTurns = isTexasActive || speaker1Meta.id === 'rex' ? [
+    {
+      speaker: speaker1Meta.name,
+      text: `[boisterous laugh] Fire up the smoker, boys, it's Sunday in Texas! Rex Vance here comin' to ya live from Parking Lot 4 outside AT&T Stadium! Chloe, did you see ${chaser}'s disaster on ${sweatGame}?! You can keep your fancy computer spreadsheets! When you bet against the home chalk, you get burned!`,
+      stageDirection: "boisterous laugh, hearty Southern drawl, big swagger",
+    },
+    {
+      speaker: speaker2Meta.name,
+      text: `[crisp analytical tone] [fast paced] Mathematically, Rex, ${winner} took an asymmetric expected-value position on ${sweatGame}, whereas ${chaser} suffered an 84.6% win-probability drop.`,
+      stageDirection: "crisp, sharp, fast analytical cadence",
+    },
+    {
+      speaker: speaker1Meta.name,
+      text: `[hearty chuckle] That's because ${winner} knows you don't mess with Texas-sized favorites! Slam sixteen points on the table and let that brisket smoke!`,
+      stageDirection: "hearty chuckle, confident Southern drawl",
+    },
+    {
+      speaker: speaker2Meta.name,
+      text: `Rex, variance will always punish uncompensated risk. But congratulations to ${winner} for taking the top spot this week.`,
+      stageDirection: "authoritative and confident NextGen analysis",
+    },
+    {
+      speaker: speaker1Meta.name,
+      text: `[boisterous belly laugh] Put your beef on the line, lock your picks in, and let's go win Week ${weekNumber}!`,
+      stageDirection: "boisterous belly laugh, triumphant",
+    },
+  ] : [
     {
       speaker: speaker1Meta.name,
       text: `[clears throat] [booming Ditka baritone] Good morning, Chicago! Dis is Coach Sal comin' to ya live from Vito & Sal's Beef on 35th and Halsted! Wit' me as always, lookin' down her nose from an MIT spreadsheet, is Dr. Chloe Vance! Chloe, did you see ${chaser}'s disaster on ${sweatGame}?!`,
@@ -2348,7 +2803,7 @@ app.post("/api/broadcast/generate", async (req, res) => {
     {
       speaker: speaker1Meta.name,
       text: `[boisterous laugh] [chuckles] Intangibles, Chloe! ${winner} has got ice in his veins and spicy giardiniera on his breath! Todd takes da whole pot! ${chaser}, you're on mop duty at da beef stand!`,
-      stageDirection: "hearty belly laugh, triumph",
+      stageDirection: "chuckles warmly in Ditka baritone",
     },
   ];
 
@@ -2414,14 +2869,14 @@ app.post("/api/broadcast/generate", async (req, res) => {
     .map((turn) => `${turn.speaker}: ${turn.text}`)
     .join("\n")}`;
 
-  const fallbackFullPromptPayload = `TTS the following conversation between ${speaker1Meta.name} and ${speaker2Meta.name}. ${DEFAULT_CHICAGO_DIRECTORS_NOTES}\n\n${fallbackTtsPromptText}`;
+  const fallbackFullPromptPayload = `TTS the following conversation between ${speaker1Meta.name} and ${speaker2Meta.name}. ${showSceneBackstory}\n\n${fallbackTtsPromptText}`;
 
   try {
     const ai = getGeminiClient();
     if (!ai) {
       return res.json({
-        headline: "🥩 Halsted & Ivy: Coach Sal & Dr. Chloe Clash Over Dave's Choke!",
-        show_title: "The Halsted & Ivy Sports Roundtable",
+        headline: `🎙️ ${showTitle}: ${speaker1Meta.name} & ${speaker2Meta.name} Clash Over ${chaser}'s Choke!`,
+        show_title: showTitle,
         roast_target_team: chaser,
         is_multi_speaker: true,
         speaker_1: speaker1Meta,
@@ -2430,20 +2885,20 @@ app.post("/api/broadcast/generate", async (req, res) => {
         radio_script_text: fallbackTtsPromptText,
         full_tts_prompt: fallbackFullPromptPayload,
         character_persona: `${speaker1Meta.title} & ${speaker2Meta.title}`,
-        scene_backstory: DEFAULT_CHICAGO_SCENE,
-        directors_notes: DEFAULT_CHICAGO_DIRECTORS_NOTES,
-        anthem_prompt: "High-energy 80s Chicago polka-synthwave celebration with pounding bass and victory brass",
-        ballad_prompt: "Melancholic South-Side Chicago blues guitar and mournful harmonica titled 'Dave's Goal-Line Disaster'",
+        scene_backstory: showSceneBackstory,
+        directors_notes: activeCadence,
+        anthem_prompt: "High-energy Texas tailgate celebration with country rock guitar and triumphant brass",
+        ballad_prompt: "Melancholic acoustic guitar ballad titled 'The Chalk Bettor's Ruin'",
         key_stats: [
-          "Todd gained +14 net points on Kansas City's goal-line stand",
-          "Dave dropped from 1st to 2nd with zero points earned on Buffalo (12 pts)",
+          `Todd gained +${margin || 14} net points on Kansas City's goal-line stand`,
+          `Dave dropped from 1st to 2nd with zero points earned on Buffalo (12 pts)`,
           "Win probability swung by 84% in the final 90 seconds",
         ],
       });
     }
 
-    const prompt = `You are the executive producer of the smash-hit Chicago sports talk show "Halsted & Ivy: The Gridiron Dispute".
-The show is broadcast live from Vito & Sal's Italian Beef on 35th and Halsted in Bridgeport, Chicago.
+    const prompt = `You are the executive producer of the smash-hit sports talk show "${showTitle}".
+The show is broadcast live from ${showSetting}.
 
 The two on-air hosts are:
 1. Speaker "${speaker1Meta.name}" (${speaker1Meta.title}): ${speaker1Meta.promptBio}
@@ -2489,8 +2944,8 @@ Crucial requirements:
 
 Return ONLY valid JSON matching this schema:
 {
-  "headline": "Punchy talk show news ticker headline (e.g. 'Halsted & Ivy: Coach Sal & ${speaker2Meta.name} Clash Over ${chaser}\\'s Choke!')",
-  "show_title": "Halsted & Ivy: The Gridiron Dispute",
+  "headline": "Punchy talk show news ticker headline (e.g. '${showTitle}: ${speaker1Meta.name} & ${speaker2Meta.name} Clash Over ${chaser}\\'s Choke!')",
+  "show_title": "${showTitle}",
   "roast_target_team": "${chaser}",
   "dialogue_turns": [
     { "speaker": "${speaker1Meta.name}", "text": "...", "stageDirection": "..." },
@@ -2499,8 +2954,8 @@ Return ONLY valid JSON matching this schema:
     { "speaker": "${speaker2Meta.name}", "text": "...", "stageDirection": "..." },
     { "speaker": "${speaker1Meta.name}", "text": "...", "stageDirection": "..." }
   ],
-  "scene_backstory": "Corner laminate booth at Vito & Sal's Italian Beef on 35th & Halsted, Chicago. Steam hissing off the au jus vat, neon Old Style clock buzzing.",
-  "directors_notes": "Director's Note: ${activeCadence}. Sal is ${speaker1Meta.name} (${speaker1Meta.voiceName}). Co-host is ${speaker2Meta.name} (${speaker2Meta.voiceName}).",
+  "scene_backstory": "${showSceneBackstory}",
+  "directors_notes": "Director's Note: ${activeCadence}. Lead host is ${speaker1Meta.name} (${speaker1Meta.voiceName}). Co-host is ${speaker2Meta.name} (${speaker2Meta.voiceName}).",
   "key_stats": [
     "Todd gained +${margin || 14} net leverage points in the league",
     "Dave dropped points on ${sweatGame} top confidence lock"
@@ -2539,7 +2994,8 @@ Return ONLY valid JSON matching this schema:
       .map((t) => `${t.speaker}: ${t.text}`)
       .join("\n")}`;
 
-    parsed.show_title = parsed.show_title || "Halsted & Ivy: The Gridiron Dispute";
+    parsed.show_title = parsed.show_title || showTitle;
+    parsed.scene_backstory = parsed.scene_backstory || showSceneBackstory;
     parsed.is_multi_speaker = true;
     parsed.speaker_1 = speaker1Meta;
     parsed.speaker_2 = speaker2Meta;
@@ -2633,13 +3089,13 @@ Keep it sharp, funny, sports-literate, and cite a humorous fake or real statisti
 app.post("/api/broadcast/commentary", async (req, res) => {
   const {
     teamId = "team-todd",
-    weekNumber = 7,
+    weekNumber = 2,
     persona = "dual", // "dual" | "sal" | "chloe" | "commish"
     focusMode = "full_debrief", // "full_debrief" | "strategy_audit" | "anchor_leverage"
     userQuestion = "",
   } = req.body;
 
-  const numericWeek = Number(weekNumber) || 7;
+  const numericWeek = Number(weekNumber) || 2;
   const teamAccuracyData = getTeamSeasonAccuracy(teamId);
   const weekRecord =
     teamAccuracyData.weeklyTrends.find((w) => w.week === numericWeek) ||
@@ -2985,7 +3441,7 @@ app.post("/api/coach/ask-advice", async (req, res) => {
     question = "How should I allocate my 14 to 16 point anchor picks this week?",
     coach = "sal",
     teamId = "team-todd",
-    weekNumber = 2,
+    weekNumber = 3,
   } = req.body;
 
   const teamProfile = getPickerAdviceProfile(teamId);
@@ -2996,58 +3452,230 @@ app.post("/api/coach/ask-advice", async (req, res) => {
   // Rule-based fallback generator for immediate offline / 503 resilience
   const buildFallbackAdvice = () => {
     const qLower = (question || "").toLowerCase();
-    let headline = "COACH SAL'S CHALK TALK: DISCIPLINE WINS THE INITECH INVITATIONAL!";
-    let verbalAdvice = `[clears throat] [booming Ditka baritone] Listen to me, ${ownerName}! You're sittin' at Rank #${currentRank}, and you're lookin' for the magic pill. Let me tell ya what wins in this league: [shouting with passion] IT'S NOT BEING CUTE! [pause] It's the trenches! You protect your big four hammers—the 13, 14, 15, and 16-point buckets—like they're the last beef sandwiches in Bridgeport! You only put double-digit confidence on teams that control both sides of the line of scrimmage, win the turnover battle, and don't turn the football over in their own territory. You leave the 1 and 2-point scrap heap for the coin-flip road dogs. [chuckles] That's how we climb to number one!`;
+    let headline = "COACH SAL'S CHALK TALK: WEEK 3 TRENCH HAMMERS & CONFIDENCE BLUEPRINT!";
+    let verbalAdvice = `[clears throat] [booming Ditka baritone] Listen to me, ${ownerName}! You're sittin' at Rank #${currentRank}, and you're lookin' for the winning blueprint. Let me tell ya what wins in this league: [shouting with passion] IT'S NOT BEING CUTE! [pause] It's the trenches! In this next week, look at Buffalo hostin' the Chargers (-7.0): based on our trench dominance strategy, I would put sixteen points on Josh Allen and da Bills. Next, look at Kansas City hostin' Miami (-11.5)—based on the spread and talent gap, I would put fifteen points on Mahomes at Arrowhead. For your fourteen-point hammer, look at Detroit hostin' the Jets (-6.5)—I would put fourteen points on da Lions because their offensive line will maul that defensive front. And for your mid-tier leverage, look at Baltimore visitin' Dallas (-3.0)—I would put nine points on Lamar Jackson and Derrick Henry to run straight through Dallas's soft run defense! That locks 54 points on proven trench winners while dese other clowns panic! [chuckles] That's how we climb to number one!`;
     let bulletPoints = [
-      "Rule 1 (The Iron Anchor): Put your 14, 15, and 16 points exclusively on home favorites with dominant offensive line run-block win rates.",
-      "Rule 2 (The Thursday Night Quarantine): Never assign more than 5 confidence points to Thursday night games—short rest creates erratic turnover variance.",
-      "Rule 3 (The Leverage Pivot): If you need to chase the leader, don't blow up your whole card; find ONE public chalk trap (80%+ public on a 3-point favorite) and fade it with 7 confidence points.",
-      "Rule 4 (Monday Night Ammo): Reserve 6 to 9 points for Monday Night Football so you have the mathematical runway to pivot if you need points to clinch.",
+      "Target 1 (16 Points): Lock BUF (-7.0 vs LAC) — dominant offensive line run-block win rate and 84% win probability.",
+      "Target 2 (15 Points): Lock KC (-11.5 vs MIA) — elite home floor with 89% modeled Bayesian win probability.",
+      "Target 3 (14 Points): Lock DET (-6.5 vs NYJ) — line of scrimmage control and turnover margin indoors at Ford Field.",
+      "Target 4 (9 Points Leverage): Allocate BAL (-3.0 @ DAL) — positive rushing EPA matchup to leapfrog stagnant pool leaders.",
     ];
     let goldenRule = "Never risk double-digit confidence on a team that can't run a trap play!";
     let recommendedPicks = [
       {
-        matchup: "DET Lions @ GB Packers",
-        recommendedTeam: "DET",
-        confidenceTier: "14-16 (Heavy Anchor)",
-        rationale: "Dominant offensive line projection; Lions control tempo and limit short-field turnovers.",
-      },
-      {
-        matchup: "BAL Ravens @ KC Chiefs",
-        recommendedTeam: "BAL",
-        confidenceTier: "10-12 (Core Value)",
-        rationale: "Elite rushing attack creates positive time-of-possession leverage against crowd consensus.",
-      },
-      {
-        matchup: "BUF Bills vs ARI Cardinals",
+        matchup: "BUF vs LAC (-7.0)",
         recommendedTeam: "BUF",
-        confidenceTier: "6-8 (Mid Buffer)",
-        rationale: "High public ownership (88%) makes this dangerous chalk; protect capital with a moderate hedge.",
+        confidencePoints: 16,
+        confidenceTier: "16 Points (Top Heavy Anchor)",
+        rationale: "Dominant offensive line projection; Bills control tempo and overpower Chargers defensive front.",
+      },
+      {
+        matchup: "KC vs MIA (-11.5)",
+        recommendedTeam: "KC",
+        confidencePoints: 15,
+        confidenceTier: "15 Points (Core Anchor)",
+        rationale: "Highest win probability on the slate (89%); Mahomes at Arrowhead against backup Miami QB.",
+      },
+      {
+        matchup: "DET vs NYJ (-6.5)",
+        recommendedTeam: "DET",
+        confidencePoints: 14,
+        confidenceTier: "14 Points (Trench Hammer)",
+        rationale: "Lions offensive line win rate exceeds 80%; Goff operates with elite clean-pocket efficiency.",
+      },
+      {
+        matchup: "BAL @ DAL (-3.0)",
+        recommendedTeam: "BAL",
+        confidencePoints: 9,
+        confidenceTier: "9 Points (High Leverage)",
+        rationale: "Lamar Jackson and Derrick Henry rushing attack exploits Dallas interior run defense vulnerability.",
       },
     ];
-    let chloePerspective = `Statistical EPA analysis confirms Sal's principle: 68.4% of total pool scoring variance is concentrated in games weighted 11-16 points. Maximizing win probability on those four games yields a higher seasonal expected value than hunting low-probability upsets.`;
+    let chloePerspective = `Statistical EPA analysis confirms Sal's principle: 68.4% of total pool scoring variance is concentrated in games weighted 11-16 points. Allocating 16 to Buffalo and 15 to Kansas City captures 86.6% combined expected value while shielding portfolio equity.`;
 
     if (qLower.includes("chase") || qLower.includes("leader") || qLower.includes("catch") || qLower.includes("underdog")) {
       headline = "COACH SAL'S CHASE PROTOCOL: SURGICAL PIVOTS, NOT SUICIDE MISSIONS!";
-      verbalAdvice = `[clears throat] [emphasized] You wanna catch the leader, ${ownerName}? [shouting with passion] You don't do it by pickin' eight underdogs and throwing your season into Lake Michigan! That's amateur hour! [pause] You look for THE ONE GAME where the public is completely drunk on a hype train. When 85% of Yahoo is on a 3.5-point favorite, that's where you drop a 7-point pivot on the underdog! If it hits, you gain 14 net points on the whole field in one swing!`;
-      goldenRule = "One well-placed 7-point dagger beats six reckless 1-point prayer picks every single time.";
+      verbalAdvice = `[clears throat] [emphasized] You wanna catch the leader, ${ownerName}? [shouting with passion] You don't do it by pickin' eight underdogs and throwing your season into Lake Michigan! In this next week, keep your anchors disciplined: look at Buffalo hostin' the Chargers (-7.0), put sixteen points on the Bills; and look at Kansas City hostin' Miami (-11.5), put fifteen points on the Chiefs. But for your chase move, look at Dallas hostin' Baltimore (+3.0): based on our leverage strategy, I would put nine points on the Cowboys as a home dog! If they hit, you pick up 18 net points on the field! And look at Minnesota hostin' Tampa Bay (-1.5)—based on defensive pressure, I would put seven points on the Vikings defense. One well-placed dagger beats six reckless prayer picks!`;
+      goldenRule = "One well-placed 7-to-9 point dagger beats six reckless 1-point prayer picks every single time.";
+      recommendedPicks = [
+        {
+          matchup: "BUF vs LAC (-7.0)",
+          recommendedTeam: "BUF",
+          confidencePoints: 16,
+          confidenceTier: "16 Points (Top Heavy Anchor)",
+          rationale: "Retain high anchor stability to avoid catastrophic self-elimination.",
+        },
+        {
+          matchup: "KC vs MIA (-11.5)",
+          recommendedTeam: "KC",
+          confidencePoints: 15,
+          confidenceTier: "15 Points (Core Anchor)",
+          rationale: "Unshakable floor anchor while you take targeted calculated swings in the middle tier.",
+        },
+        {
+          matchup: "DAL vs BAL (+3.0)",
+          recommendedTeam: "DAL",
+          confidencePoints: 9,
+          confidenceTier: "9 Points (Chaos Leverage Pivot)",
+          rationale: "Fades public consensus on road favorite Baltimore; swings 18 net points against pool leaders.",
+        },
+        {
+          matchup: "MIN vs TB (-1.5)",
+          recommendedTeam: "MIN",
+          confidencePoints: 7,
+          confidenceTier: "7 Points (Midfield Leverage)",
+          rationale: "Brian Flores blitz packages create high turnover variance against Baker Mayfield.",
+        },
+      ];
     } else if (qLower.includes("anchor") || qLower.includes("14") || qLower.includes("16") || qLower.includes("heavy")) {
-      headline = "COACH SAL'S ANCHOR DEFENSE: LOCK UP FORT KNOX!";
-      verbalAdvice = `[shouting with passion] [pause] Look at me! Your 13, 14, 15, and 16-pointers are worth 58 total points! That's almost half your entire week! You do NOT give those points to rookie quarterbacks on the road! You give them to veteran signal callers with top-five defensive pass rushes. When you hit 4-for-4 on anchors, you cannot have a bad week in this pool!`;
+      headline = "COACH SAL'S ANCHOR DEFENSE: LOCK UP FORT KNOX ON BUF & KC!";
+      verbalAdvice = `[shouting with passion] [pause] Look at me, ${ownerName}! Your 14, 15, and 16-pointers are worth 45 points alone! In this next week, look at Buffalo hostin' the Chargers (-7.0): based on our anchor strategy, I would put sixteen points on Josh Allen and da Bills. Next, look at Kansas City hostin' Miami (-11.5): based on home-field advantage and quarterback disparity, I would put fifteen points on Patrick Mahomes. And look at Detroit hostin' the Jets (-6.5): based on line-of-scrimmage control, I would put fourteen points on da Lions! That's Fort Knox! Protect those points with your life!`;
       goldenRule = "Your anchors aren't for gambling; they're for collecting interest. Protect them with your life.";
-    } else if (qLower.includes("thursday") || qLower.includes("monday") || qLower.includes("mnf")) {
+      recommendedPicks = [
+        {
+          matchup: "BUF vs LAC (-7.0)",
+          recommendedTeam: "BUF",
+          confidencePoints: 16,
+          confidenceTier: "16 Points (Maximum Anchor)",
+          rationale: "Bills offensive line holds a 78% run-block win rate against LA's interior.",
+        },
+        {
+          matchup: "KC vs MIA (-11.5)",
+          recommendedTeam: "KC",
+          confidencePoints: 15,
+          confidenceTier: "15 Points (Core Anchor)",
+          rationale: "Mahomes at Arrowhead against backup Miami quarterback; 89% win probability.",
+        },
+        {
+          matchup: "DET vs NYJ (-6.5)",
+          recommendedTeam: "DET",
+          confidencePoints: 14,
+          confidenceTier: "14 Points (Trench Hammer)",
+          rationale: "Lions dominate turnover margin indoors at Ford Field.",
+        },
+        {
+          matchup: "SF vs ARI (-8.5)",
+          recommendedTeam: "SF",
+          confidencePoints: 13,
+          confidenceTier: "13 Points (High Floor Anchor)",
+          rationale: "Shanahan offensive scheme rebounds with heavy red-zone execution.",
+        },
+      ];
+    } else if (qLower.includes("thursday") || qLower.includes("monday") || qLower.includes("primetime") || qLower.includes("mnf")) {
       headline = "COACH SAL'S PRIMETIME RULE: QUARANTINE THURSDAY, WEAPONIZE MONDAY!";
-      verbalAdvice = `[groans in disgust] [pause] Thursday night football is sloppy football, period! Guys didn't even heal from Sunday! Keep your Thursday pick under 4 points. But Monday night? That's your closer! Keep 7 or 8 points on Monday night so when Sunday wraps up, you know EXACTLY what you need to take home the weekly prize!`;
+      verbalAdvice = `[groans in disgust] [pause] Thursday night football is sloppy football, period! In this next week, look at Green Bay hostin' Atlanta (-6.0) on Thursday: based on short-rest volatility, I would put only five points on the Packers—quarantine it! Then on Sunday, look at Buffalo (-7.0 vs LAC): I would put sixteen points on Josh Allen; and look at Kansas City (-11.5 vs MIA): I would put fifteen points on Patrick Mahomes. Finally, look at Philadelphia hostin' Chicago (-3.5) on Monday night: I would put eight points on the Eagles so you have the scalpel ready to close out your week!`;
       goldenRule = "Thursday is a minefield; Monday is your scalpel.";
+      recommendedPicks = [
+        {
+          matchup: "GB vs ATL (-6.0, TNF)",
+          recommendedTeam: "GB",
+          confidencePoints: 5,
+          confidenceTier: "5 Points (Quarantined Primetime)",
+          rationale: "High spread on short rest; quarantine risk below the double-digit threshold.",
+        },
+        {
+          matchup: "BUF vs LAC (-7.0, SUN)",
+          recommendedTeam: "BUF",
+          confidencePoints: 16,
+          confidenceTier: "16 Points (Sunday Fortress Anchor)",
+          rationale: "Sunday afternoon home game with full preparation and superior line play.",
+        },
+        {
+          matchup: "KC vs MIA (-11.5, SUN)",
+          recommendedTeam: "KC",
+          confidencePoints: 15,
+          confidenceTier: "15 Points (Sunday Floor Anchor)",
+          rationale: "Arrowhead crowd noise and defensive front guarantee an elite floor.",
+        },
+        {
+          matchup: "PHI vs CHI (-3.5, MNF)",
+          recommendedTeam: "PHI",
+          confidencePoints: 8,
+          confidenceTier: "8 Points (Monday Night Scalpel)",
+          rationale: "Strategic late-game leverage point to leapfrog rivals after Sunday cards settle.",
+        },
+      ];
+    } else if (qLower.includes("chalk") || qLower.includes("trap") || qLower.includes("dead")) {
+      headline = "COACH SAL'S CHALK RADAR: IDENTIFYING PHANTOM FAVORITES!";
+      verbalAdvice = `[clears throat] [booming Ditka baritone] Real chalk wins in the trenches; fake chalk gets blown up in the fourth quarter! In this next week, look at Kansas City hostin' Miami (-11.5): that is legitimate chalk, so I would put sixteen points on Patrick Mahomes. Next, look at Buffalo hostin' the Chargers (-7.0): based on line dominance, I would put fifteen points on the Bills. And look at Detroit hostin' the Jets (-6.5): I would put fourteen points on the Lions. But for your trap warning, look at Baltimore visitin' Dallas (-3.0): that is dangerous road chalk, so I would put only six points on Baltimore to protect your ceiling if Dallas catches fire!`;
+      goldenRule = "Road favorites laying three or fewer points are poison for double-digit points.";
+      recommendedPicks = [
+        {
+          matchup: "KC vs MIA (-11.5)",
+          recommendedTeam: "KC",
+          confidencePoints: 16,
+          confidenceTier: "16 Points (Legitimate Chalk Lock)",
+          rationale: "Double-digit home favorite against compromised offense; low variance.",
+        },
+        {
+          matchup: "BUF vs LAC (-7.0)",
+          recommendedTeam: "BUF",
+          confidencePoints: 15,
+          confidenceTier: "15 Points (Physical Chalk Anchor)",
+          rationale: "Superior line play and weather advantage at Highmark Stadium.",
+        },
+        {
+          matchup: "DET vs NYJ (-6.5)",
+          recommendedTeam: "DET",
+          confidencePoints: 14,
+          confidenceTier: "14 Points (Trench Domination)",
+          rationale: "Goff and Campbell's offensive line control game clock and limit turnovers.",
+        },
+        {
+          matchup: "BAL @ DAL (-3.0)",
+          recommendedTeam: "BAL",
+          confidencePoints: 6,
+          confidenceTier: "6 Points (Chalk Trap Warning)",
+          rationale: "Hostile road environment; road favorite variance makes double digits suicidal.",
+        },
+      ];
+    } else if (qLower.includes("audit") || qLower.includes("portfolio") || qLower.includes("vulnerabilit")) {
+      headline = "COACH SAL'S PORTFOLIO AUDIT: REBALANCING FOR MAXIMUM EQUITY!";
+      verbalAdvice = `[clears throat] Let's audit your confidence ladder, ${ownerName}! In this next week, look at Buffalo hostin' the Chargers (-7.0): based on expected value, I would put sixteen points on Josh Allen and the Bills. Next, look at Kansas City hostin' Miami (-11.5): I would put fifteen points on Mahomes at Arrowhead. Next, look at Detroit hostin' the Jets (-6.5): based on offensive line efficiency, I would put fourteen points on the Lions. And look at Jacksonville hostin' New England (-3.0): based on home defense, I would put eight points on the Jaguars to solidify your mid-tier point foundation!`;
+      goldenRule = "Cluster your high points on home favorites with superior offensive lines.";
+      recommendedPicks = [
+        {
+          matchup: "BUF vs LAC (-7.0)",
+          recommendedTeam: "BUF",
+          confidencePoints: 16,
+          confidenceTier: "16 Points (Anchor Foundation)",
+          rationale: "Bills generate +0.14 EPA per dropback; safest ceiling on the card.",
+        },
+        {
+          matchup: "KC vs MIA (-11.5)",
+          recommendedTeam: "KC",
+          confidencePoints: 15,
+          confidenceTier: "15 Points (Core Floor)",
+          rationale: "Chiefs defense allows only 17.2 PPG at home; elite stability.",
+        },
+        {
+          matchup: "DET vs NYJ (-6.5)",
+          recommendedTeam: "DET",
+          confidencePoints: 14,
+          confidenceTier: "14 Points (Trench Anchor)",
+          rationale: "Detroit run game wears down opposing defensive front in second half.",
+        },
+        {
+          matchup: "JAX vs NE (-3.0)",
+          recommendedTeam: "JAX",
+          confidencePoints: 8,
+          confidenceTier: "8 Points (Mid-Tier Stabilizer)",
+          rationale: "Jaguars defensive front controls tempo against rebuilding Patriots offensive line.",
+        },
+      ];
+    } else if (qLower.includes("golden") || qLower.includes("rule") || qLower.includes("number one")) {
+      headline = "COACH SAL'S NUMBER ONE GOLDEN RULE: THE TRENCHES DECIDE THE CARD!";
+      verbalAdvice = `[booming Ditka baritone] [pause] My number one golden rule? Listen closely, ${ownerName}: the game is won in the trenches, not in a fantasy magazine! In this next week, look at Buffalo hostin' the Chargers (-7.0): based on my golden rule of trench dominance, I would put sixteen points on Josh Allen and da Bills. Next, look at Kansas City hostin' Miami (-11.5): I would put fifteen points on Mahomes at Arrowhead. Look at Detroit hostin' the Jets (-6.5): I would put fourteen points on the Lions because that offensive line moves mountains. And look at Baltimore at Dallas (-3.0): I would put nine points on Lamar Jackson and Derrick Henry to run the ball right down their throats! That's the golden rule in action!`;
+      goldenRule = "Never risk double-digit confidence on a team that can't run a trap play!";
     }
 
     if (coach === "chloe") {
-      headline = `DR. CHLOE VANCE: BAYESIAN PORTFOLIO OPTIMIZATION`;
-      verbalAdvice = `[crisp analytical tone] [fast paced] Looking at the variance matrix for ${teamName}, your priority is maximizing Closing Line Value (CLV). In the Initech Invitational, the median participant overweights public favorites by 12.8%. By aligning your highest confidence buckets with Vegas consensus models rather than public sentiment, you generate an asymmetric risk-reward curve that outperforms the field over an 18-week sample.`;
+      headline = `DR. CHLOE VANCE: BAYESIAN PORTFOLIO ALLOCATION FOR WEEK 3`;
+      verbalAdvice = `[crisp analytical tone] [fast paced] For ${ownerName} at Rank #${currentRank}, our MIT Sloan Bayesian simulation delivers these strategic allocations for the upcoming slate: In this next week, look at Buffalo hosting the Chargers (-7.0): based on an 84.2% modeled win probability, allocate 16 confidence points to Buffalo. Next, look at Kansas City hosting Miami (-11.5): allocate 15 points to Patrick Mahomes with an 89.1% Bayesian floor. Next, look at Detroit hosting the Jets (-6.5): deploy 14 points on Detroit given their +0.18 EPA rushing advantage. And for your leverage pivot, look at Baltimore at Dallas (-3.0): allocate 9 points on Baltimore to capture closing line value against public consensus.`;
       goldenRule = "Eliminate uncompensated variance: weight games strictly by modeled win probability delta.";
     } else if (coach === "commish") {
-      headline = `THE COMMISH AI: OFFICIAL INITECH INVITATIONAL DIRECTIVE`;
-      verbalAdvice = `[deadpan monotone] [pause] Commissioner Audit for ${ownerName}: All picks lock strictly at scheduled kickoff. To maximize your clinch index and prevent elimination from weekly high-score payouts, maintain strict confidence tier separation. Dispersing high confidence uniformly across uncertain matchups statistically accelerates elimination.`;
+      headline = `THE COMMISH AI: OFFICIAL WEEK 3 DIRECTIVE FOR ${ownerName.toUpperCase()}`;
+      verbalAdvice = `[deadpan monotone] [pause] Commissioner Directive for ${ownerName}, Rank #${currentRank}: In this next week, look at Buffalo (-7.0 vs LAC): based on capital preservation strategy, assign 16 points to Buffalo. Next, look at Kansas City (-11.5 vs MIA): allocate 15 points to Kansas City. Next, look at Detroit (-6.5 vs NYJ): assign 14 points to Detroit. Finally, look at Baltimore (-3.0 @ DAL): allocate 9 points to Baltimore. All locks freeze at scheduled kickoff with zero commissioner discretion or retroactive appeals.`;
       goldenRule = "Standings reward disciplined capital preservation; rash speculation guarantees a mid-table finish.";
     }
 
@@ -3093,29 +3721,57 @@ app.post("/api/coach/ask-advice", async (req, res) => {
 User's Question: "${question}"
 Manager Name: "${ownerName}"
 Team Name: "${teamName}"
-Current League Standing: Rank #${currentRank} out of 10 managers in the league
+Current League Standing: Rank #${currentRank} out of 12 managers in the league
 Week Number: Week ${weekNumber}
+
+OFFICIAL ACTIVE WEEK 3 NFL SLATE (Games & Vegas Lines):
+1. Green Bay Packers (-6.0) vs Atlanta Falcons
+2. Buffalo Bills (-7.0) vs LA Chargers
+3. Carolina Panthers (-2.5) vs Cleveland Browns
+4. Detroit Lions (-6.5) vs NY Jets
+5. Houston Texans (-2.5) vs Indianapolis Colts
+6. Kansas City Chiefs (-11.5) vs Miami Dolphins
+7. New York Giants (-3.0) vs Tennessee Titans
+8. Cincinnati Bengals (-3.5) vs Pittsburgh Steelers
+9. Seattle Seahawks (-7.0) vs Washington Commanders
+10. Jacksonville Jaguars (-3.0) vs New England Patriots
+11. San Francisco 49ers (-8.5) vs Arizona Cardinals
+12. Minnesota Vikings (-1.5) vs Tampa Bay Buccaneers
+13. Baltimore Ravens (-3.0) vs Dallas Cowboys
+14. New Orleans Saints (-3.0) vs Las Vegas Raiders
+15. LA Rams (-2.5) vs Denver Broncos
+16. Philadelphia Eagles (-3.5) vs Chicago Bears
 
 Persona Guidelines:
 ${personaInstructions}
 
-Provide concrete, actionable advice on how to make picks, allocate confidence points (1 to 16), avoid chalk traps, or analyze specific matchups.
+CRITICAL USER MANDATE - SPECIFIC UPCOMING PICKS & EXACT CONFIDENCE POINTS:
+You MUST provide concrete, actionable advice mentioning SPECIFIC upcoming Week 3 games and EXACT confidence point allocations (1 to 16).
+For example: "In this next week, look at Buffalo hostin' the Chargers (-7.0): based on our trench strategy, I would put 16 points on Josh Allen and da Bills. Next, look at Kansas City (-11.5 vs MIA)—put 15 points on Mahomes at Arrowhead. For your 14 hammer, ride Detroit (-6.5 vs NYJ)... and for leverage, put 9 points on Baltimore (-3.0 @ DAL)!"
+Based on the question, strategy, or ranking, you MUST recommend 3 to 4 specific games from the Week 3 slate, stating:
+1. The exact matchup and spread.
+2. The recommended team to pick.
+3. The EXACT confidence points number (e.g. 16, 15, 14, 9, 7, etc.).
+4. The tactical trench or mathematical rationale.
+In "verbalAdvice", the speaker MUST audibly state these specific games, teams, and confidence numbers. Do NOT give vague platitudes without concrete games and points.
+
 Output JSON strictly conforming to this schema:
 {
-  "headline": "Punchy all-caps coaching headline",
-  "verbalAdvice": "Detailed direct spoken response (130-180 words) formatted for Gemini Flash TTS. Use audio-focused bracketed tags to control vocal tone, word emphasis, pauses, and vocal sound effects (e.g. [whispers], [shouting], [sighs], [moans], [groans], [clears throat], [chuckle], [pause], [emphasized], [fast paced], [fart noise]). NEVER include physical stage directions like [slaps desk] or [adjusts glasses] as they ruin audio generation.",
+  "headline": "Punchy all-caps coaching headline mentioning specific key game",
+  "verbalAdvice": "Detailed direct spoken response (140-190 words) formatted for Gemini Flash TTS. Use audio-focused bracketed tags to control vocal tone, word emphasis, pauses, and vocal sound effects (e.g. [whispers], [shouting], [sighs], [moans], [groans], [clears throat], [chuckle], [pause], [emphasized], [fast paced]). MUST explicitly speak the specific matchups and exact confidence points to assign. NEVER include physical stage directions like [slaps desk] or [adjusts glasses].",
   "bulletPoints": [
-    "Rule 1: ...",
-    "Rule 2: ...",
-    "Rule 3: ...",
-    "Rule 4: ..."
+    "Target 1 (16 pts): ...",
+    "Target 2 (15 pts): ...",
+    "Target 3 (14 pts): ...",
+    "Target 4 (Leverage pts): ..."
   ],
   "goldenRule": "One punchy signature rule of thumb",
   "recommendedPicks": [
     {
-      "matchup": "Matchup name e.g. DET @ GB",
-      "recommendedTeam": "e.g. DET",
-      "confidenceTier": "14-16 (Heavy Anchor) or 8-13 (Core Value) or 1-7 (Low Hedge)",
+      "matchup": "e.g. BUF vs LAC (-7.0)",
+      "recommendedTeam": "e.g. BUF",
+      "confidencePoints": 16,
+      "confidenceTier": "16 Points (Top Heavy Anchor)",
       "rationale": "Clear trench and situational reasoning"
     }
   ],

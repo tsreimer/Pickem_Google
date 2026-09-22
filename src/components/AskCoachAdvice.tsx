@@ -41,6 +41,7 @@ export interface CoachAdviceData {
   recommendedPicks: Array<{
     matchup: string;
     recommendedTeam: string;
+    confidencePoints?: number;
     confidenceTier: string;
     rationale: string;
   }>;
@@ -194,7 +195,7 @@ export const AskCoachAdvice: React.FC<AskCoachAdviceProps> = ({
           question: q,
           coach: selectedCoach,
           teamId: activeTeam.id,
-          weekNumber: 2,
+          weekNumber: 3,
         }),
       });
 
@@ -759,30 +760,62 @@ export const AskCoachAdvice: React.FC<AskCoachAdviceProps> = ({
             {/* Recommended Matchup Picks Table */}
             {adviceData.recommendedPicks && adviceData.recommendedPicks.length > 0 && (
               <div className="space-y-2 pt-2">
-                <div className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <Sliders className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Recommended Slate Allocations & Matchup Logic:</span>
+                <div className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Recommended Slate Allocations & Matchup Directives:</span>
+                  </div>
+                  <span className="text-[11px] font-mono text-emerald-400 font-semibold">
+                    Week 3 Confidence Recommendations
+                  </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  {adviceData.recommendedPicks.map((pick, pIdx) => (
-                    <div
-                      key={pIdx}
-                      className="p-3 rounded-xl bg-[#0B0F17] border border-slate-800 text-xs space-y-1.5"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono text-[11px] text-slate-400">{pick.matchup}</span>
-                        <span className="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-300 font-mono font-black text-[10px]">
-                          {pick.recommendedTeam}
-                        </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                  {adviceData.recommendedPicks.map((pick, pIdx) => {
+                    const pts = pick.confidencePoints || parseInt(pick.confidenceTier, 10) || null;
+                    const isHighAnchor = pts && pts >= 14;
+                    const isCore = pts && pts >= 8 && pts < 14;
+
+                    return (
+                      <div
+                        key={pIdx}
+                        className="p-3 rounded-xl bg-[#0B0F17] border border-slate-800 text-xs space-y-2 flex flex-col justify-between hover:border-slate-700 transition-colors"
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-mono font-bold text-xs text-slate-300 truncate">
+                              {pick.matchup}
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-700/80 text-emerald-300 font-mono font-black text-xs shrink-0">
+                              PICK: {pick.recommendedTeam}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {pts ? (
+                              <span
+                                className={`px-2 py-0.5 rounded text-[11px] font-mono font-black border ${
+                                  isHighAnchor
+                                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                    : isCore
+                                    ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                                    : 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+                                }`}
+                              >
+                                {pts} Points
+                              </span>
+                            ) : null}
+                            <span className="text-[11px] font-mono text-slate-400 truncate">
+                              {pick.confidenceTier}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="text-[11px] text-slate-300/90 leading-relaxed border-t border-slate-800/80 pt-1.5">
+                          {pick.rationale}
+                        </div>
                       </div>
-                      <div className="text-[11px] font-mono font-bold text-amber-400">
-                        {pick.confidenceTier}
-                      </div>
-                      <div className="text-[11px] text-slate-400 leading-snug">
-                        {pick.rationale}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

@@ -37,9 +37,10 @@ export const BroadcastCommentarySidebar: React.FC = () => {
     currentTeam,
     teams,
     setCurrentTeamId,
+    currentWeek,
   } = useTeam();
 
-  const [selectedWeek, setSelectedWeek] = useState<number>(7);
+  const [selectedWeek, setSelectedWeek] = useState<number>(currentWeek || 2);
   const [selectedPersona, setSelectedPersona] = useState<'dual' | 'sal' | 'chloe' | 'commish'>('dual');
   const [focusMode, setFocusMode] = useState<'full_debrief' | 'strategy_audit' | 'anchor_leverage'>('full_debrief');
   const [userQuestion, setUserQuestion] = useState<string>('');
@@ -360,7 +361,7 @@ export const BroadcastCommentarySidebar: React.FC = () => {
           </div>
         </div>
 
-        {/* Week Selector Bar (Weeks 1-7) */}
+        {/* Week Selector Bar (Completed Weeks) */}
         <div>
           <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1.5 font-medium">
             <span>NFL Regular Season Week:</span>
@@ -370,15 +371,15 @@ export const BroadcastCommentarySidebar: React.FC = () => {
               </span>
             )}
           </div>
-          <div className="grid grid-cols-7 gap-1.5">
-            {[1, 2, 3, 4, 5, 6, 7].map((wk) => {
-              const wkData = currentAccuracyRecord.weeklyTrends.find((w) => w.week === wk);
+          <div className={`grid gap-2 ${currentAccuracyRecord.weeklyTrends.length <= 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-7'}`}>
+            {currentAccuracyRecord.weeklyTrends.map((wkData) => {
+              const wk = wkData.week;
               const isSelected = selectedWeek === wk;
               return (
                 <button
                   key={wk}
                   onClick={() => setSelectedWeek(wk)}
-                  className={`flex flex-col items-center py-2 px-1 rounded-xl transition border text-center ${
+                  className={`flex flex-col items-center py-2 px-2 rounded-xl transition border text-center ${
                     isSelected
                       ? 'bg-gradient-to-b from-emerald-500 to-teal-600 text-black border-emerald-400 font-bold shadow-md shadow-emerald-500/20'
                       : 'bg-[#151D2A] hover:bg-[#1E293B] text-slate-300 border-[#1E293B]'
@@ -388,15 +389,13 @@ export const BroadcastCommentarySidebar: React.FC = () => {
                     Wk
                   </span>
                   <span className="text-sm font-black">{wk}</span>
-                  {wkData && (
-                    <span
-                      className={`text-[9px] font-mono mt-0.5 ${
-                        isSelected ? 'text-black font-extrabold' : 'text-emerald-400'
-                      }`}
-                    >
-                      {wkData.accuracy}%
-                    </span>
-                  )}
+                  <span
+                    className={`text-[10px] font-mono mt-0.5 ${
+                      isSelected ? 'text-black font-extrabold' : 'text-emerald-400'
+                    }`}
+                  >
+                    {wkData.accuracy}%
+                  </span>
                 </button>
               );
             })}

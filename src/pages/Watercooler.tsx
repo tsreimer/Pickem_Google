@@ -49,9 +49,9 @@ interface VoiceOption {
 const GEMINI_VOICES: VoiceOption[] = [
   { id: 'Fenrir', name: 'Fenrir', label: 'Coach Ditka (Halsted Beef)', gender: 'Male', badge: 'Ditka Baritone', desc: 'Deep, gravelly South-Side baritone with table slaps, cigar wheezes, and authentic Chicago grit' },
   { id: 'Kore', name: 'Kore', label: 'Dr. Chloe Vance (MIT Analytics)', gender: 'Female', badge: 'Crisp & Sharp', desc: 'Sharp, authoritative analyst dissecting win probability collapse, EPA/play, and confidence allocations' },
-  { id: 'Puck', name: 'Puck', label: 'Kev "The Score" Callahan', gender: 'Male', badge: 'High-Tempo Radio', desc: 'Fast-paced, sarcastic, fiery AM sports talk radio caller shouting about blown 8-leg parlays' },
+  { id: 'Puck', name: 'Puck', label: 'The Commish / Kev Callahan', gender: 'Male', badge: 'Executive Baritone', desc: 'Deadpan commissioner authority or fast-paced AM radio screamer' },
   { id: 'Zephyr', name: 'Zephyr', label: 'Rex "Big Gunslinger" McCoy', gender: 'Male', badge: 'Texas Swagger', desc: 'Deep, booming Southern football booster obsessed with arm talent, quarterbacks, and 60-yard bombs' },
-  { id: 'Charon', name: 'Charon', label: '1985 Soldier Field Narrator', gender: 'Male', badge: 'Gritty Legend', desc: 'Gravelly, legendary NFL Films narrator documenting Chicago gridiron triumphs and tragic chokes' },
+  { id: 'Charon', name: 'Charon', label: 'Rex Vance (Texas Smoker Tailgate)', gender: 'Male', badge: 'Charon (Texas Drawl)', desc: 'Warm, booming Southern drawl with hearty chuckles, hickory smoker swagger, and 16-point chalk locks' },
 ];
 
 export interface HostPersonaOption {
@@ -87,6 +87,20 @@ export const SPEAKER_PERSONAS: HostPersonaOption[] = [
     promptBio: 'A 61-year-old South-Side Chicago Italian beef proprietor and 1985 Bears diehard. Speaks with a thick Mike Ditka accent ("da", "dis", "dat", "wit"), loves running the ball, slaps the table, scoffs at computers and fancy analytics.',
   },
   {
+    id: 'rex',
+    name: 'Rex Vance',
+    title: 'Rex "Big Chalk" Vance',
+    role: 'Texas Oilman, AT&T Stadium Smoker Master & 16-Pt Chalk Bettor',
+    archetype: 'Texas Big-Chalk Tailgate',
+    voiceName: 'Charon',
+    avatar: '🤠',
+    color: '#8B5CF6',
+    badge: 'Charon (Texas Drawl)',
+    tagline: 'When the Cowboys are laying three and a hook, slam 16 points and don\'t look back!',
+    description: 'Boisterous Dallas tailgater with hickory smoke, booming laughter, and 16-point chalk locks.',
+    promptBio: 'A boisterous Dallas oilman and hardcore tailgater outside AT&T Stadium. Speaks with a warm, hearty Southern drawl, bursts into booming laughter, loves slamming 16-point anchors on heavy favorites, scoffs at overthinking, and smells like hickory wood smoke.',
+  },
+  {
     id: 'chloe',
     name: 'Chloe',
     title: 'Dr. Chloe "The Algorithm" Vance',
@@ -101,6 +115,20 @@ export const SPEAKER_PERSONAS: HostPersonaOption[] = [
     promptBio: 'A 28-year-old MIT Sloan analytics director who sips matcha latte, cites Expected Points Added (EPA/play), win-probability charts, and dissects football through cold mathematical regression.',
   },
   {
+    id: 'commish',
+    name: 'The Commish',
+    title: 'The Commissioner',
+    role: 'Official Custodian of the Initech Invitational Constitution',
+    archetype: 'High Table Executive Ruling',
+    voiceName: 'Puck',
+    avatar: '⚖️',
+    color: '#6366F1',
+    badge: 'Puck (Deadpan Authority)',
+    tagline: 'Retroactive complaints regarding missed locks will be archived directly in the shredder.',
+    description: 'Deadpan executive commissioner issuing unbending league memorandums with zero tolerance for whining.',
+    promptBio: 'Uncompromising, dry-witted league commissioner. Delivers official league rulings in a deadpan, formal executive baritone with pregnant pauses.',
+  },
+  {
     id: 'kev',
     name: 'Kev',
     title: 'Kev "The Score" Callahan',
@@ -113,20 +141,6 @@ export const SPEAKER_PERSONAS: HostPersonaOption[] = [
     tagline: 'I put my entire 401(k) on Buffalo! Fire the coordinator!',
     description: 'Rapid-fire, caffeine-fueled caller screaming about blown parlays and calling for every coach to be fired.',
     promptBio: 'A caffeinated, rapid-fire AM 670 sports radio screamer who had heavy confidence on the game, screams about blown picks, interrupts frantically, and demands every coach get fired immediately.',
-  },
-  {
-    id: 'rex',
-    name: 'Rex',
-    title: 'Rex "Big Gunslinger" McCoy',
-    role: 'Texas Quarterback Booster with Big Belt Buckle',
-    archetype: 'Southern Arm-Talent Evangelist',
-    voiceName: 'Zephyr',
-    avatar: '🤠',
-    color: '#8B5CF6',
-    badge: 'Zephyr (Deep Texas Swagger)',
-    tagline: 'If your quarterback can\'t throw a strawberry through a battleship, bench him!',
-    description: 'Obsessed with raw arm talent, 60-yard bombs, and old-school stadium tailgates.',
-    promptBio: 'A big-talking Texas football booster with an enormous belt buckle who only cares about raw arm talent, deep 60-yard post routes, and big stadium tailgates, laughing boisterously at cold-weather trench football.',
   },
   {
     id: 'marty',
@@ -222,6 +236,7 @@ export const Watercooler: React.FC = () => {
   const [selectedStyleId, setSelectedStyleId] = useState<string>(() => {
     return localStorage.getItem('watercooler_style') || 'rapid_crossfire';
   });
+  const [commissionerProfile, setCommissionerProfile] = useState<any>(null);
   const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
   const [isSynthesizing, setIsSynthesizing] = useState<boolean>(false);
   const [synthesisError, setSynthesisError] = useState<string | null>(null);
@@ -230,6 +245,36 @@ export const Watercooler: React.FC = () => {
   const [ttsQuotaExceeded, setTtsQuotaExceeded] = useState<boolean>(false);
   const [isHighDemand, setIsHighDemand] = useState<boolean>(false);
   const [ttsNotice, setTtsNotice] = useState<string | null>(null);
+
+  // Synchronize with active Commissioner Audio Profile on mount
+  useEffect(() => {
+    fetch('/api/commissioner/tts-profile')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.activeProfile) {
+          setCommissionerProfile(data.activeProfile);
+          const prof = data.activeProfile;
+          const isTexas = prof.id === 'profile-texas-chalk' || prof.name?.toLowerCase().includes('texas');
+          const isMit = prof.id === 'profile-mit-sloan' || prof.name?.toLowerCase().includes('mit');
+          const isCommish = prof.id === 'profile-commish-ruling' || prof.name?.toLowerCase().includes('commish');
+
+          if (isTexas) {
+            setSelectedSpeaker1PersonaId('rex');
+            setSelectedVoice1(prof.speakerConfigs?.[0]?.voiceName || 'Charon');
+          } else if (isMit) {
+            setSelectedSpeaker1PersonaId('chloe');
+            setSelectedVoice1(prof.speakerConfigs?.[0]?.voiceName || 'Kore');
+          } else if (isCommish) {
+            setSelectedSpeaker1PersonaId('commish');
+            setSelectedVoice1(prof.speakerConfigs?.[0]?.voiceName || 'Puck');
+          } else if (prof.id === 'profile-halsted-war-room') {
+            setSelectedSpeaker1PersonaId('sal');
+            setSelectedVoice1(prof.speakerConfigs?.[0]?.voiceName || 'Fenrir');
+          }
+        }
+      })
+      .catch(err => console.warn('Could not sync commissioner profile in Watercooler:', err));
+  }, []);
 
   const handleSaveVoiceConfig = () => {
     localStorage.setItem('watercooler_speaker1_persona', selectedSpeaker1PersonaId);
@@ -736,6 +781,7 @@ export const Watercooler: React.FC = () => {
           debateCadence: activeStyle.label,
           cadencePrompt: activeStyle.prompt,
           stylePrompt: activeStyle.prompt,
+          activeProfileId: commissionerProfile?.id || '',
         }),
       });
 
@@ -1268,6 +1314,44 @@ export const Watercooler: React.FC = () => {
                 Assigns independent persona & vocal configs to each debate partner
               </span>
             </div>
+
+            {commissionerProfile && (
+              <div className="bg-purple-950/40 border border-purple-800/50 rounded-lg p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🎙️</span>
+                  <div>
+                    <span className="text-purple-300 font-bold">Commissioner Audio Profile Synced: </span>
+                    <span className="text-white font-semibold">{commissionerProfile.name}</span>
+                    <span className="text-purple-400 text-[11px] block sm:inline sm:ml-2">
+                      (Configured for {activeSpeaker1Persona.name} • {selectedVoice1})
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const prof = commissionerProfile;
+                    const isTexas = prof.id === 'profile-texas-chalk' || prof.name?.toLowerCase().includes('texas');
+                    const isMit = prof.id === 'profile-mit-sloan' || prof.name?.toLowerCase().includes('mit');
+                    const isCommish = prof.id === 'profile-commish-ruling' || prof.name?.toLowerCase().includes('commish');
+                    if (isTexas) {
+                      setSelectedSpeaker1PersonaId('rex');
+                      setSelectedVoice1(prof.speakerConfigs?.[0]?.voiceName || 'Charon');
+                    } else if (isMit) {
+                      setSelectedSpeaker1PersonaId('chloe');
+                      setSelectedVoice1(prof.speakerConfigs?.[0]?.voiceName || 'Kore');
+                    } else if (isCommish) {
+                      setSelectedSpeaker1PersonaId('commish');
+                      setSelectedVoice1(prof.speakerConfigs?.[0]?.voiceName || 'Puck');
+                    }
+                    handleSaveVoiceConfig();
+                  }}
+                  className="px-2.5 py-1 bg-purple-800/60 hover:bg-purple-700 text-purple-200 hover:text-white rounded border border-purple-600/50 text-[11px] font-mono transition self-end sm:self-auto cursor-pointer"
+                >
+                  Apply Preset to Voice Studio
+                </button>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               

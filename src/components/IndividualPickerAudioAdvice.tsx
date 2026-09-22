@@ -1041,6 +1041,69 @@ export const IndividualPickerAudioAdvice: React.FC<IndividualPickerAudioAdvicePr
             </div>
           </div>
 
+          {/* Week 3 Tactical Matchup Directives & Confidence Allocation */}
+          {currentProfile.recommendedPicks && currentProfile.recommendedPicks.length > 0 && (
+            <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-white font-mono">
+                  <span className="p-1 rounded bg-amber-500/20 text-amber-300">🎯</span>
+                  <span className="text-amber-300 uppercase tracking-wide">
+                    Week 3 Specific Matchups & Confidence Allocations:
+                  </span>
+                </div>
+                <span className="text-[11px] font-mono text-emerald-400 font-semibold bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded">
+                  Tailored for {currentProfile.ownerName} ({currentProfile.teamName})
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
+                {currentProfile.recommendedPicks.map((pick, pIdx) => {
+                  const isHighAnchor = pick.confidencePoints >= 14;
+                  const isCore = pick.confidencePoints >= 8 && pick.confidencePoints < 14;
+
+                  return (
+                    <div
+                      key={pIdx}
+                      className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 hover:border-slate-700 transition-colors flex flex-col justify-between space-y-2"
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-xs font-mono font-bold text-slate-200 truncate">
+                            {pick.matchup}
+                          </span>
+                          <span className="px-2 py-0.5 rounded text-[11px] font-mono font-black bg-emerald-950 border border-emerald-700 text-emerald-300 shrink-0">
+                            PICK: {pick.recommendedTeam}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span
+                            className={`px-2 py-0.5 rounded text-xs font-mono font-black border ${
+                              isHighAnchor
+                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                : isCore
+                                ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                                : 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+                            }`}
+                          >
+                            {pick.confidencePoints} Points
+                          </span>
+                          <span className="text-[11px] font-mono text-slate-400">
+                            ({pick.spread})
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-[11px] text-slate-300/90 leading-relaxed border-t border-slate-800/80 pt-1.5">
+                        {pick.rationale}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Tactical Blueprint Bullet Points */}
           <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
             <div className="flex items-center gap-2 text-xs font-bold text-white font-mono">

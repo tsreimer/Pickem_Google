@@ -3,8 +3,10 @@ import {
   YAHOO_WEEK_GAMES,
   YAHOO_WEEK_1_GAMES,
   YAHOO_WEEK_2_GAMES,
+  YAHOO_WEEK_3_GAMES,
   YAHOO_WEEK_1_PICKS_MATRIX,
   YAHOO_WEEK_2_PICKS_MATRIX,
+  YAHOO_WEEK_3_PICKS_MATRIX,
   YAHOO_GROUP_PICKS_MATRIX,
 } from '../data/mockData';
 import { ExternalLink, Info, CheckCircle2, Lock, Eye, AlertCircle, Clock, FileSpreadsheet, RefreshCw } from 'lucide-react';
@@ -16,8 +18,8 @@ export const YahooGroupPicksTable: React.FC = () => {
   const [selectedGameFilter, setSelectedGameFilter] = useState<number | 'all'>('all');
   const { yahooLockWindows, groupPicksMatrix, setActiveTab, currentWeek, setCurrentWeek, isSyncingLockWindow, syncYahooLockWindow } = useTeam();
 
-  const games = currentWeek === 2 ? YAHOO_WEEK_2_GAMES : YAHOO_WEEK_1_GAMES;
-  const matrix = groupPicksMatrix || (currentWeek === 2 ? YAHOO_WEEK_2_PICKS_MATRIX : YAHOO_WEEK_1_PICKS_MATRIX);
+  const games = currentWeek === 3 ? YAHOO_WEEK_3_GAMES : currentWeek === 2 ? YAHOO_WEEK_2_GAMES : YAHOO_WEEK_1_GAMES;
+  const matrix = groupPicksMatrix || (currentWeek === 3 ? YAHOO_WEEK_3_PICKS_MATRIX : currentWeek === 2 ? YAHOO_WEEK_2_PICKS_MATRIX : YAHOO_WEEK_1_PICKS_MATRIX);
 
   return (
     <div className="space-y-4">
@@ -30,14 +32,16 @@ export const YahooGroupPicksTable: React.FC = () => {
           <div>
             <div className="text-white font-bold text-sm flex items-center gap-2">
               <span>
-                Synchronized: 100% Match with Initech Invitational (Week {currentWeek} Final)
+                Synchronized: 100% Match with Initech Invitational (Week {currentWeek} {currentWeek === 3 ? 'Active Slate' : 'Final'})
               </span>
               <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold">
-                {currentWeek === 2 ? 'WEEK 2 FINAL (ALL PICKS REVEALED)' : 'WEEK 1 FINAL'}
+                {currentWeek === 3 ? 'WEEK 3 ACTIVE SLATE' : currentWeek === 2 ? 'WEEK 2 FINAL (ALL PICKS REVEALED)' : 'WEEK 1 FINAL'}
               </span>
             </div>
             <p className="text-slate-300 text-xs mt-0.5">
-              {currentWeek === 2
+              {currentWeek === 3
+                ? 'Week 3 Active Slate (Verified against Yahoo Group ID# 13003): 16 matchups loaded. All 12 manager rosters ingested. Auto-sync daemon armed for Thursday kickoff (ATL @ GB).'
+                : currentWeek === 2
                 ? 'Week 2 Complete & Settled (Verified against Yahoo Group ID# 13003): All 16 games final. Champion: Bird Boss (Amy) wins 1st Place with 104 pts ($25.00 purse)! Runner-Up: Shoeman (99 pts). Todd finishes 12th with 69 pts.'
                 : 'Confirmed 12 teams, finalized cards, and Week 1 Co-Champions: Cory (Niner Faithful) & Dalton (Bed Bath & Bijan) (102 pts each, splitting $25 purse).'}
             </p>

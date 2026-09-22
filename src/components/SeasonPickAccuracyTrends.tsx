@@ -45,7 +45,7 @@ type MetricMode = 'accuracy' | 'efficiency' | 'cumulative' | 'anchors';
 type ChartStyle = 'area' | 'line' | 'bar';
 
 export const SeasonPickAccuracyTrends: React.FC = () => {
-  const { currentTeam, setCurrentTeamId, setIsCommentarySidebarOpen, teams } = useTeam();
+  const { currentTeam, setCurrentTeamId, setIsCommentarySidebarOpen, teams, currentWeek } = useTeam();
 
   const [selectedTeamId, setSelectedTeamId] = useState<string>(currentTeam?.id || 'team-todd');
   const [metricMode, setMetricMode] = useState<MetricMode>('accuracy');
@@ -55,6 +55,8 @@ export const SeasonPickAccuracyTrends: React.FC = () => {
   const [showBreakEven, setShowBreakEven] = useState<boolean>(true);
   const [showGranularTable, setShowGranularTable] = useState<boolean>(false);
   const [hoveredWeek, setHoveredWeek] = useState<number | null>(null);
+
+  const activeMaxWeek = currentWeek || 2;
 
   // Sync with currentTeam if it changes outside
   React.useEffect(() => {
@@ -80,9 +82,14 @@ export const SeasonPickAccuracyTrends: React.FC = () => {
     );
   }, [activeTeamMeta]);
 
+  // Filter trends to completed weeks only
+  const filteredWeeklyTrends = useMemo(() => {
+    return teamData.weeklyTrends.filter((w) => w.week <= activeMaxWeek);
+  }, [teamData.weeklyTrends, activeMaxWeek]);
+
   // Format data for Recharts based on chosen metric
   const chartData = useMemo(() => {
-    return teamData.weeklyTrends.map((w) => {
+    return filteredWeeklyTrends.map((w) => {
       let teamVal = w.accuracy;
       let leagueVal = w.leagueAvgAccuracy;
       let vegasVal = w.vegasFavoriteAccuracy;
@@ -282,7 +289,7 @@ export const SeasonPickAccuracyTrends: React.FC = () => {
             Historical Pick Accuracy Trends
           </h2>
           <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl">
-            Track week-by-week accuracy progression, confidence point capture rates, and high-anchor hit rates across the current NFL season against the league.
+            Track authentic week-by-week accuracy progression, confidence point capture rates, and high-anchor hit rates across settled NFL slates (Weeks 1 & 2, 32 games) against the Initech Invitational field.
           </p>
         </div>
 
@@ -710,7 +717,7 @@ export const SeasonPickAccuracyTrends: React.FC = () => {
           </div>
 
           <span className="text-slate-500 text-[11px]">
-            Week 1–7 NFL Regular Season • Initech Invitational
+            Settled Slates: Weeks 1–2 (32 Games) • Week 3 Active Slate • Initech Invitational
           </span>
         </div>
       </div>
@@ -757,7 +764,26 @@ export const SeasonPickAccuracyTrends: React.FC = () => {
             </span>
           </div>
           <p className="text-[11px] text-slate-400 truncate">
-            Grade: <strong className="text-emerald-300">A (Masterful Anchors)</strong>
+            Grade:{' '}
+            <strong
+              className={
+                teamData.currentSeasonEfficiency >= 70
+                  ? 'text-emerald-300'
+                  : teamData.currentSeasonEfficiency >= 63
+                  ? 'text-teal-300'
+                  : teamData.currentSeasonEfficiency >= 58
+                  ? 'text-amber-300'
+                  : 'text-red-400'
+              }
+            >
+              {teamData.currentSeasonEfficiency >= 70
+                ? 'A (Masterful Anchors)'
+                : teamData.currentSeasonEfficiency >= 63
+                ? 'B+ (Above Field Median)'
+                : teamData.currentSeasonEfficiency >= 58
+                ? 'B (Chalk-Heavy Defensive)'
+                : 'C+ (Upset Exposure)'}
+            </strong>
           </p>
         </div>
 
@@ -810,7 +836,7 @@ export const SeasonPickAccuracyTrends: React.FC = () => {
           <span className="flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-emerald-400" />
             <span>
-              {showGranularTable ? 'Hide Weekly Accuracy Ledger' : 'View Full Week-by-Week Accuracy Ledger (Weeks 1–7)'}
+              {showGranularTable ? 'Hide Weekly Accuracy Ledger' : `View Full Week-by-Week Accuracy Ledger (Weeks 1–${activeMaxWeek})`}
             </span>
           </span>
           {showGranularTable ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -833,7 +859,7 @@ export const SeasonPickAccuracyTrends: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 text-slate-300">
-                {teamData.weeklyTrends.map((w) => {
+                {filteredWeeklyTrends.map((w) => {
                   const isBeatLeague = w.accuracy >= w.leagueAvgAccuracy;
                   return (
                     <tr
