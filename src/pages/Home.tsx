@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTeam } from '../context/TeamContext';
-import { INITIAL_TEAMS, AUDIO_TRACKS } from '../data/mockData';
+import { AUDIO_TRACKS } from '../data/mockData';
 import { SeasonPickAccuracyTrends } from '../components/SeasonPickAccuracyTrends';
+import { LeagueTreasuryCard } from '../components/LeagueTreasuryCard';
 import {
   Play,
   Pause,
@@ -24,10 +25,11 @@ import {
   Clock,
   Waves,
   Zap,
+  DollarSign,
 } from 'lucide-react';
 
 export const Home: React.FC = () => {
-  const { currentTeam, setCurrentTeamId, setActiveTab } = useTeam();
+  const { currentTeam, setCurrentTeamId, setActiveTab, teams, currentWeek, setCurrentWeek } = useTeam();
 
   // Audio Playback State
   const [isPlaying, setIsPlaying] = useState(false);
@@ -269,19 +271,47 @@ export const Home: React.FC = () => {
           1. HERO SECTION: Welcoming, Clean, High-Prestige Overview
       ========================================================================= */}
       <section className="text-center max-w-4xl mx-auto pt-4 pb-2">
-        {/* League Pill Badges */}
-        <div className="inline-flex flex-wrap items-center justify-center gap-2 p-1.5 px-3 rounded-full bg-[#151D2A] border border-[#1E293B] text-xs font-semibold text-slate-300 mb-6 shadow-sm">
-          <span className="flex items-center gap-1.5 text-emerald-400">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-            <span>Week 1 Wrap & Week 2 Live</span>
-          </span>
-          <span className="text-slate-600">•</span>
-          <span className="text-purple-300">Initech Invitational</span>
-          <span className="text-slate-600">•</span>
-          <span className="text-cyan-400 flex items-center gap-1">
-            <Sparkles className="w-3 h-3" />
-            Gemini 3.1 Flash Neural Audio
-          </span>
+        {/* League Pill Badges & Global Week Selector */}
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+          <div className="inline-flex flex-wrap items-center justify-center gap-2 p-1.5 px-3 rounded-full bg-[#151D2A] border border-[#1E293B] text-xs font-semibold text-slate-300 shadow-sm">
+            <span className="flex items-center gap-1.5 text-emerald-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span>{currentWeek === 2 ? 'Week 2 Complete (Official Final Standings)' : 'Week 1 Wrap (Final Standings)'}</span>
+            </span>
+            <span className="text-slate-600">•</span>
+            <span className="text-purple-300">The Initech Invitational</span>
+            <span className="text-slate-600">•</span>
+            <span className="text-cyan-400 flex items-center gap-1">
+              <Sparkles className="w-3 h-3" />
+              Gemini 3.1 Flash Neural Audio
+            </span>
+          </div>
+
+          {/* Quick Slate Toggle Pill */}
+          <div className="inline-flex items-center gap-1 bg-[#0B0F17] border border-[#1E293B] p-1 rounded-full text-xs font-mono">
+            <span className="text-slate-400 px-2 text-[10px] font-bold uppercase">Slate:</span>
+            <button
+              onClick={() => setCurrentWeek(1)}
+              className={`px-3 py-1 rounded-full font-bold text-xs transition cursor-pointer ${
+                currentWeek === 1
+                  ? 'bg-purple-600 text-white shadow font-black'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Week 1 (Final)
+            </button>
+            <button
+              onClick={() => setCurrentWeek(2)}
+              className={`px-3 py-1 rounded-full font-bold text-xs transition cursor-pointer flex items-center gap-1.5 ${
+                currentWeek === 2
+                  ? 'bg-emerald-500 text-black shadow font-black'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-black"></span>
+              Week 2 (Final)
+            </button>
+          </div>
         </div>
 
         {/* Big Bold Headline */}
@@ -301,7 +331,7 @@ export const Home: React.FC = () => {
         <div className="flex flex-wrap items-center justify-center gap-6 mt-6 pt-4 border-t border-[#1E293B]/60 text-xs font-mono text-slate-400">
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-emerald-400" />
-            <span>10 Active Franchises</span>
+            <span>12 Active Franchises</span>
           </div>
           <div className="flex items-center gap-2">
             <Zap className="w-4 h-4 text-amber-400" />
@@ -310,6 +340,10 @@ export const Home: React.FC = () => {
           <div className="flex items-center gap-2">
             <Shield className="w-4 h-4 text-purple-400" />
             <span>PuLP ILP Solver Engine</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <DollarSign className="w-4 h-4 text-emerald-400" />
+            <span>$600 League Purse ($25/wk)</span>
           </div>
         </div>
       </section>
@@ -327,19 +361,21 @@ export const Home: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-950/80 border border-red-700/60 text-[11px] font-mono font-bold text-red-300 uppercase tracking-wide animate-pulse">
-                  <span className="w-2 h-2 rounded-full bg-red-400"></span>
-                  ON AIR • WEEKLY RECAP
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-950/80 border border-emerald-700/60 text-[11px] font-mono font-bold text-emerald-300 uppercase tracking-wide">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  FINAL • {currentWeek === 2 ? 'WEEK 2 CHAMPION CROWNED' : 'WEEK 1 FINAL RECAP'}
                 </span>
                 <span className="text-xs font-mono text-slate-400 px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700">
-                  Episode 1 • 01:34 Pre-Generated
+                  {currentWeek === 2 ? 'Episode 2 • 16 of 16 Games Settled' : 'Episode 1 • 01:34 Pre-Generated'}
                 </span>
                 <span className="text-xs font-mono text-emerald-400 px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-800 hidden sm:inline-block">
                   ⚡ 24kHz Neural Audio
                 </span>
               </div>
               <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                Halsted & Ivy: Week 1 Recap & SoFi Bloodbath
+                {currentWeek === 2
+                  ? 'Halsted & Ivy: Week 2 Official Wrap — Bird Boss Triumphs with 104 Pts'
+                  : 'Halsted & Ivy: Week 1 Recap & SoFi Bloodbath'}
               </h2>
               <p className="text-xs sm:text-sm text-slate-400">
                 Featuring <strong className="text-orange-400">Coach Sal Ditkofsky</strong> (Bridgeport Chicago) & <strong className="text-cyan-400">Dr. Chloe Vance</strong> (MIT Sloan Sports Analytics)
@@ -407,59 +443,111 @@ export const Home: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
                 <Waves className="w-4 h-4" />
-                <span>Executive Written Recap</span>
+                <span>Executive Written Recap (Week {currentWeek})</span>
               </div>
               <span className="text-[11px] font-mono text-slate-500">
-                Carnage Index: 114 Pts Lost
+                {currentWeek === 2
+                  ? 'All 16 Games Final • Official Yahoo Group ID# 13003 Verified'
+                  : 'Carnage Index: 114 Pts Lost in Week 1'}
               </span>
             </div>
 
-            <p className="text-sm sm:text-base text-slate-200 leading-relaxed">
-              What a brutal opening week in the Initech Invitational. Eleven out of twelve managers assigned high confidence to Matthew Stafford and the Rams, only to watch Kyle Shanahan's 49ers pull off a 24–21 road upset that incinerated <strong className="text-red-400 font-bold">114 aggregate confidence points</strong>.
-            </p>
+            {currentWeek === 2 ? (
+              <p className="text-sm sm:text-base text-slate-200 leading-relaxed">
+                Week 2 has officially concluded across all 16 games! <strong className="text-amber-400 font-bold">Amy (Bird Boss)</strong> engineered an unbelievable week, capturing sole 1st place with <strong className="text-white font-bold">104 points</strong> and claiming the entire <strong className="text-emerald-400 font-bold">$25.00 weekly purse</strong>. Her winning masterpiece was staking a bold <strong className="text-amber-300">15-point confidence anchor</strong> on the underdog Las Vegas Raiders, while also cashing SF (16) and KC (11). <strong className="text-cyan-300 font-bold">Steve (Shoeman)</strong> captured runner-up at <strong className="text-white">99 points</strong> after cashing Buffalo (16) and SF (15). Todd Reimer weathered heavy pool upsets to finish with <strong className="text-white">69 points</strong>, cashing his top anchor on San Francisco (16) and late anchors on KC (11) and LAR (13).
+              </p>
+            ) : (
+              <p className="text-sm sm:text-base text-slate-200 leading-relaxed">
+                What a brutal opening week in the Initech Invitational. Eleven out of twelve managers assigned high confidence to Matthew Stafford and the Rams, only to watch Kyle Shanahan's 49ers pull off a 24–21 road upset that incinerated <strong className="text-red-400 font-bold">114 aggregate confidence points</strong>. Co-Champions Cory & Dalton split the $25 purse with 102 points each.
+              </p>
+            )}
 
             {/* Scannable Highlights Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
-              <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-start gap-2.5">
-                <span className="text-xl">🍊</span>
-                <div>
-                  <h4 className="text-xs font-bold text-orange-400">Sole Survivor</h4>
-                  <p className="text-[11px] text-slate-300">
-                    Orange crush cashed the +10 SF upset to claim 1st place with 26 points.
-                  </p>
+            {currentWeek === 2 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+                <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-start gap-2.5">
+                  <span className="text-xl">🏆</span>
+                  <div>
+                    <h4 className="text-xs font-bold text-amber-400">Bird Boss Champion</h4>
+                    <p className="text-[11px] text-slate-300">
+                      Amy hits 104 pts ($25 purse) powered by a legendary 15-pt Las Vegas underdog cash!
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-start gap-2.5">
-                <span className="text-xl">💀</span>
-                <div>
-                  <h4 className="text-xs font-bold text-red-400">Shoeman Crushed</h4>
-                  <p className="text-[11px] text-slate-300">
-                    Lost #1 16-pt anchor on LAR; season ceiling clipped to 120 max points.
-                  </p>
+                <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-start gap-2.5">
+                  <span className="text-xl">🥈</span>
+                  <div>
+                    <h4 className="text-xs font-bold text-cyan-400">Shoeman Runner-Up</h4>
+                    <p className="text-[11px] text-slate-300">
+                      Steve tallies 99 pts, cashing BUF [16], SF [15], and Sea [12] for a strong podium spot.
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-start gap-2.5">
-                <span className="text-xl">🥩</span>
-                <div>
-                  <h4 className="text-xs font-bold text-emerald-400">Sleeping Giant</h4>
-                  <p className="text-[11px] text-slate-300">
-                    Todd Reimer preserved all top 7 anchors (91 pts) for #1 win equity.
-                  </p>
+                <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-start gap-2.5">
+                  <span className="text-xl">🥉</span>
+                  <div>
+                    <h4 className="text-xs font-bold text-blue-400">BroncosCountry 3rd</h4>
+                    <p className="text-[11px] text-slate-300">
+                      Patrick secures 96 pts, nailing SF [16] and grabbing the CIN [3] underdog point swing.
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-start gap-2.5">
-                <span className="text-xl">🛡️</span>
-                <div>
-                  <h4 className="text-xs font-bold text-blue-400">Master Hedge</h4>
-                  <p className="text-[11px] text-slate-300">
-                    PatN risked only 1 pt on LAR, preserving a league-best 135 max points.
-                  </p>
+                <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-start gap-2.5">
+                  <span className="text-xl">💰</span>
+                  <div>
+                    <h4 className="text-xs font-bold text-emerald-400">$25 Purse Awarded</h4>
+                    <p className="text-[11px] text-slate-300">
+                      Amy claims the full $25 prize with sole possession of first place at 104 pts.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+                <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-start gap-2.5">
+                  <span className="text-xl">🏆</span>
+                  <div>
+                    <h4 className="text-xs font-bold text-orange-400">Co-Champions Split</h4>
+                    <p className="text-[11px] text-slate-300">
+                      Cory & Dalton tied at 102 pts each, splitting the $25 Week 1 pot ($12.50 ea).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-start gap-2.5">
+                  <span className="text-xl">💀</span>
+                  <div>
+                    <h4 className="text-xs font-bold text-red-400">Shoeman Crushed</h4>
+                    <p className="text-[11px] text-slate-300">
+                      Lost #1 16-pt anchor on LAR; finished 8th in Week 1 standings with 83 pts.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-start gap-2.5">
+                  <span className="text-xl">🥩</span>
+                  <div>
+                    <h4 className="text-xs font-bold text-emerald-400">Todd Reimer 3rd</h4>
+                    <p className="text-[11px] text-slate-300">
+                      Preserved top anchors on heavy favorites to lock in 98 pts for a strong podium finish.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-start gap-2.5">
+                  <span className="text-xl">🛡️</span>
+                  <div>
+                    <h4 className="text-xs font-bold text-blue-400">Master Hedge</h4>
+                    <p className="text-[11px] text-slate-300">
+                      PatN risked only 1 pt on LAR, finishing top 4 with 96 points.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* =====================================================================
@@ -589,6 +677,11 @@ export const Home: React.FC = () => {
       <SeasonPickAccuracyTrends />
 
       {/* =========================================================================
+          3b. LEAGUE TREASURY & 2026-2027 PAYOUT SCHEDULE (VENMO @Todd-Reimer)
+      ========================================================================= */}
+      <LeagueTreasuryCard />
+
+      {/* =========================================================================
           4. "CHOOSE YOUR TEAM" SECTION: Large, Highly-Polished Franchise Cards
       ========================================================================= */}
       <section className="space-y-6">
@@ -607,13 +700,13 @@ export const Home: React.FC = () => {
           </div>
 
           <div className="text-xs font-mono text-slate-400 bg-[#151D2A] border border-[#1E293B] px-3 py-1.5 rounded-lg self-start sm:self-auto">
-            10 Franchises in the League
+            12 Franchises in the League
           </div>
         </div>
 
-        {/* The Grid of 10 Team Cards */}
+        {/* The Grid of 12 Team Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-          {INITIAL_TEAMS.map((team) => {
+          {teams.map((team) => {
             const isSelected = currentTeam.id === team.id;
 
             return (

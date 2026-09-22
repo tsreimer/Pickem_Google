@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { useTeam } from '../context/TeamContext';
-import { Flame, Play, RotateCcw, AlertTriangle, ShieldCheck, CheckCircle2, TrendingUp, TrendingDown, Radio, Table } from 'lucide-react';
+import { Flame, Play, RotateCcw, AlertTriangle, ShieldCheck, CheckCircle2, TrendingUp, TrendingDown, Radio, Table, Smartphone, DollarSign } from 'lucide-react';
 import { YahooGroupPicksTable } from '../components/YahooGroupPicksTable';
+import { MobileGameDayCards } from '../components/MobileGameDayCards';
+import { KickoffCountdown } from '../components/KickoffCountdown';
+import { LeagueTreasuryCard } from '../components/LeagueTreasuryCard';
 
 export const WarRoom: React.FC = () => {
   const {
@@ -11,9 +14,11 @@ export const WarRoom: React.FC = () => {
     simulateScenario,
     simulationState,
     currentTeam,
+    currentWeek,
+    setCurrentWeek,
   } = useTeam();
 
-  const [warRoomSubTab, setWarRoomSubTab] = useState<'yahoo_matrix' | 'live_sweat'>('yahoo_matrix');
+  const [warRoomSubTab, setWarRoomSubTab] = useState<'yahoo_matrix' | 'live_sweat' | 'mobile_cards' | 'payouts'>('yahoo_matrix');
 
   const isKcWinner = simulationState === 'final_kc';
   const isBufAhead = simulationState === 'buf_ahead';
@@ -30,17 +35,17 @@ export const WarRoom: React.FC = () => {
               REDZONE LIVE
             </span>
             <span className="font-mono text-slate-300 font-semibold">
-              Week 1 Slate • 2 Games Settled (SEA won, SF upset won) • 14 Games Pending
+              {currentWeek === 2
+                ? 'Week 2 Slate • Final Standings Verified (All 16 Games Settled) • Champion: Bird Boss (104 pts)'
+                : 'Week 1 Slate • Final Standings • Co-Champions Cory & Dalton (102 pts each, split $25 purse)'}
             </span>
           </div>
           <div className="font-mono text-[11px] text-red-200 flex items-center gap-2">
             <Radio className="w-3.5 h-3.5 text-red-400 animate-pulse" />
             <span className="font-semibold">
-              {isBufAhead
-                ? '⚡ Touchdown shift impacts standings'
-                : isKcWinner
-                ? '🏁 FINAL: All Sunday early window games concluded'
-                : '⚡ Initech Invitational Live Ingestion Active • Todd Reimer: LAC (16), JAX (15), DET (14)'}
+              {currentWeek === 2
+                ? '🏆 Amy (Bird Boss) wins Week 2 with 104 pts ($25.00 purse) • Shoeman 2nd (99 pts) • Todd 12th (69 pts)'
+                : '🏁 FINAL: Week 1 Settled • No Tiebreakers • Equal Split ($25 purse)'}
             </span>
           </div>
         </div>
@@ -74,16 +79,77 @@ export const WarRoom: React.FC = () => {
             <Flame className="w-3.5 h-3.5" />
             <span>2. Live Sweat Room & Standings</span>
           </button>
+          <button
+            onClick={() => setWarRoomSubTab('mobile_cards')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+              warRoomSubTab === 'mobile_cards'
+                ? 'bg-amber-400 text-black shadow-lg shadow-amber-400/20 font-black'
+                : 'bg-[#151D2A] text-slate-400 hover:text-white border border-[#1E293B]'
+            }`}
+          >
+            <Smartphone className="w-3.5 h-3.5" />
+            <span>3. Mobile Quick-Cards Deck</span>
+            <span className="px-1.5 py-0.2 rounded text-[10px] bg-amber-400/20 text-amber-300 font-mono font-bold">
+              BAR VIEW
+            </span>
+          </button>
+          <button
+            onClick={() => setWarRoomSubTab('payouts')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+              warRoomSubTab === 'payouts'
+                ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20 font-black'
+                : 'bg-[#151D2A] text-slate-400 hover:text-white border border-[#1E293B]'
+            }`}
+          >
+            <DollarSign className="w-3.5 h-3.5" />
+            <span>4. Treasury &amp; Payout Schedule</span>
+            <span className="px-1.5 py-0.2 rounded text-[10px] bg-amber-400/20 text-amber-300 font-mono font-bold">
+              $600 POT
+            </span>
+          </button>
         </div>
-        <div className="text-xs font-mono text-slate-400 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>Initech Invitational • 12 Teams</span>
+        <div className="flex items-center gap-3">
+          {/* Global Week Selector Pill */}
+          <div className="flex items-center gap-1 bg-[#0B0F17] border border-[#1E293B] p-1 rounded-xl text-xs font-mono">
+            <span className="text-slate-400 px-2 text-[11px] font-bold">SLATE:</span>
+            <button
+              onClick={() => setCurrentWeek(1)}
+              className={`px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
+                currentWeek === 1
+                  ? 'bg-purple-600 text-white shadow font-black'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Week 1 (Final)
+            </button>
+            <button
+              onClick={() => setCurrentWeek(2)}
+              className={`px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer flex items-center gap-1.5 ${
+                currentWeek === 2
+                  ? 'bg-emerald-500 text-black shadow font-black'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-black"></span>
+              Week 2 (Final)
+            </button>
+          </div>
+
+          <div className="text-xs font-mono text-slate-400 hidden sm:flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>12 Teams</span>
+          </div>
         </div>
       </div>
 
       {/* TAB 1: Authenticated Initech Invitational Picks Matrix */}
       {warRoomSubTab === 'yahoo_matrix' && (
         <YahooGroupPicksTable />
+      )}
+
+      {/* TAB 3: Mobile Game-Day Quick Cards */}
+      {warRoomSubTab === 'mobile_cards' && (
+        <MobileGameDayCards />
       )}
 
       {/* TAB 2: Live Sweat Room & Game-Day Simulator */}
@@ -148,9 +214,11 @@ export const WarRoom: React.FC = () => {
             <span className="text-xs text-slate-400">Margin ≤ 8 pts in 4th Quarter</span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs font-mono text-amber-400 font-bold bg-amber-950/60 px-2.5 py-1 rounded border border-amber-800">
-              {activeSweatGame.clock} • {activeSweatGame.quarter}
-            </span>
+            <KickoffCountdown
+              status="in_progress"
+              liveClock={activeSweatGame.clock}
+              liveQuarter={activeSweatGame.quarter}
+            />
             <span className="text-xs font-mono text-slate-400">CBS National Broadcast</span>
           </div>
         </div>
@@ -249,15 +317,17 @@ export const WarRoom: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-[#1E293B] pb-4">
           <div>
             <h3 className="font-bold text-white text-base tracking-tight">
-              Live Pool Standings (Week 4 Slate)
+              Live Pool Standings (Week {currentWeek} Slate)
             </h3>
             <p className="text-xs text-slate-400">
-              Includes locked points + active 4th quarter sweat allocations
+              {currentWeek === 2
+                ? 'Official final standings for Week 2 • Verified against Yahoo Group ID# 13003'
+                : 'Final standings for Week 1 • No tiebreakers • Ties split prize evenly'}
             </p>
           </div>
           <div className="flex items-center gap-2 font-mono text-xs text-slate-400">
             <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span>14 of 16 Games Settled</span>
+            <span>{currentWeek === 2 ? 'All 16 Games Settled (Week 2 Final)' : 'All 16 Games Settled (Final)'}</span>
           </div>
         </div>
 
@@ -401,20 +471,18 @@ export const WarRoom: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {games.filter(g => g.id !== 'game-1').map(game => (
+          {games.filter(g => g.id !== 'game-1').map((game, idx) => (
             <div
               key={game.id}
               className="p-4 bg-[#151D2A] border border-[#1E293B] rounded-xl space-y-3"
             >
               <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-slate-400">{game.kickoffTime}</span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                  game.status === 'final'
-                    ? 'bg-slate-800 text-slate-300'
-                    : 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                }`}>
-                  {game.status === 'final' ? 'FINAL' : 'MON 8:15 PM'}
-                </span>
+                <span className="text-slate-400 font-semibold">{game.kickoffTime}</span>
+                <KickoffCountdown
+                  status={game.status}
+                  compact={true}
+                  defaultMinutesRemaining={idx === 0 ? 35 : idx === 1 ? 125 : 360}
+                />
               </div>
 
               <div className="space-y-1.5">
@@ -445,6 +513,13 @@ export const WarRoom: React.FC = () => {
         </div>
       </div>
 
+        </div>
+      )}
+
+      {/* TAB 4: Treasury & Payout Schedule */}
+      {warRoomSubTab === 'payouts' && (
+        <div className="space-y-6">
+          <LeagueTreasuryCard />
         </div>
       )}
 

@@ -45,7 +45,7 @@ type MetricMode = 'accuracy' | 'efficiency' | 'cumulative' | 'anchors';
 type ChartStyle = 'area' | 'line' | 'bar';
 
 export const SeasonPickAccuracyTrends: React.FC = () => {
-  const { currentTeam, setCurrentTeamId, setIsCommentarySidebarOpen } = useTeam();
+  const { currentTeam, setCurrentTeamId, setIsCommentarySidebarOpen, teams } = useTeam();
 
   const [selectedTeamId, setSelectedTeamId] = useState<string>(currentTeam?.id || 'team-todd');
   const [metricMode, setMetricMode] = useState<MetricMode>('accuracy');
@@ -65,11 +65,11 @@ export const SeasonPickAccuracyTrends: React.FC = () => {
 
   const activeTeamMeta = useMemo(() => {
     return (
-      INITIAL_TEAMS.find((t) => t.id === selectedTeamId) ||
-      INITIAL_TEAMS.find((t) => t.id === 'team-todd') ||
-      INITIAL_TEAMS[0]
+      teams.find((t) => t.id === selectedTeamId) ||
+      teams.find((t) => t.id === 'team-todd') ||
+      teams[0]
     );
-  }, [selectedTeamId]);
+  }, [selectedTeamId, teams]);
 
   const teamData = useMemo(() => {
     return getTeamSeasonAccuracy(
@@ -298,7 +298,7 @@ export const SeasonPickAccuracyTrends: React.FC = () => {
               }}
               className="bg-[#182335] hover:bg-[#1E2C42] text-white text-xs font-bold py-2 pl-3 pr-8 rounded-lg border border-slate-700 focus:outline-none focus:border-emerald-500 cursor-pointer transition appearance-none"
             >
-              {INITIAL_TEAMS.map((team) => (
+              {teams.map((team) => (
                 <option key={team.id} value={team.id}>
                   {team.ownerName} ({team.teamName})
                 </option>

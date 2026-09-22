@@ -36,6 +36,7 @@ const MainContent: React.FC = () => {
         {activeTab === 'strategist' && <Strategist />}
         {activeTab === 'watercooler' && <Watercooler />}
         {activeTab === 'vault' && <FranchiseVault />}
+        {activeTab === 'commissioner' && <Commissioner />}
       </main>
 
       {/* System Modals, Drawers & AI Broadcast Commentary Sidebar */}

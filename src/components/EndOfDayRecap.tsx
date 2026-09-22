@@ -32,16 +32,18 @@ export const EndOfDayRecap: React.FC<EndOfDayRecapProps> = ({
   onPlayRecapAudio,
   onPostRecapToChat,
 }) => {
-  const { teams, currentTeam, setActiveTab } = useTeam();
+  const { teams, currentTeam, setActiveTab, currentWeek, setCurrentWeek } = useTeam();
   const [filterCategory, setFilterCategory] = useState<'all' | 'user' | 'leaders' | 'high_ceiling'>('all');
   const [selectedPickerId, setSelectedPickerId] = useState<string | null>(null);
 
   // Completed games data
-  const completedGames = YAHOO_WEEK_GAMES.filter(g => g.status === 'final');
-  const pendingGames = YAHOO_WEEK_GAMES.filter(g => g.status !== 'final');
+  const completedGames = currentWeek === 2
+    ? YAHOO_WEEK_GAMES
+    : YAHOO_WEEK_GAMES.filter(g => g.status === 'final');
+  const pendingGames = currentWeek === 2 ? [] : YAHOO_WEEK_GAMES.filter(g => g.status !== 'final');
 
   // Detailed picker scorecard analytics derived from the Initech Invitational
-  const pickersAnalysis = [
+  const week1Pickers = [
     {
       teamId: 'team-orange',
       teamName: 'Orange crush',
@@ -59,148 +61,33 @@ export const EndOfDayRecap: React.FC<EndOfDayRecapProps> = ({
       netCarnage: '+10 pts vs pool average',
       maxRemaining: 136,
       lossTotal: 0,
-      damageGrade: 'A+ (Perfect)',
-      badge: '🏆 Sole SF Survivor',
-      badgeColor: 'bg-emerald-950 text-emerald-300 border-emerald-500/50',
-      outlook: 'Currently in 1st with a commanding 11-point lead. However, with opponent picks 3–16 hidden, variance will tighten once the Sunday afternoon slate kicks off.',
+      damageGrade: 'A+ (Pristine Sheet)',
+      badge: '🎯 Sole Survivor (26 Pts)',
+      badgeColor: 'bg-orange-950 text-orange-300 border-orange-500/50',
+      outlook: 'Currently in the driver seat with a perfect 26/26 score. Holds the pool’s only untouched maximum possible ceiling of 136 points. As long as top Sunday anchors hold, Orange crush has the highest probability to finish Week 1 in first place.',
     },
     {
       teamId: 'team-shoeman',
       teamName: 'Shoeman',
-      ownerName: 'Shoeman',
-      rank: 2,
-      points: 15,
+      ownerName: 'Steve',
+      rank: 12,
+      points: 4,
       avatar: 'S',
       color: '#EC4899',
       isCurrentUser: false,
       goodPicks: [
-        { game: '#1 SEA vs NE', team: 'Sea', conf: 15, note: 'Cashed 15 pts on Seattle' },
+        { game: '#1 SEA vs NE', team: 'Sea', conf: 4, note: 'Cautious 4-pt pick on Seattle' },
       ],
       badPicks: [
-        { game: '#2 LAR vs SF', team: 'LAR', conf: 16, note: '💀 MAXIMUM DAMAGE: Burned his #1 overall 16-point confidence anchor on the Rams loss' },
+        { game: '#2 LAR vs SF', team: 'LAR', conf: 16, note: '💀 DEAD CHALK CASUALTY: Assigned maximum 16 confidence points to LAR, suffering the pool’s most catastrophic loss!' },
       ],
       netCarnage: '-16 pts off ceiling',
       maxRemaining: 120,
       lossTotal: 16,
-      damageGrade: 'D (Critical Anchor Burn)',
-      badge: '💀 16-Pt Anchor Burned',
+      damageGrade: 'F (Maximum Carnage)',
+      badge: '💀 16-Pt Anchor Torched',
       badgeColor: 'bg-red-950 text-red-300 border-red-500/50',
-      outlook: 'Sitting 2nd for now, but losing a 16-point anchor severely caps maximum point ceiling at 120. Needs massive underdog upsets across Sunday to stay in podium contention.',
-    },
-    {
-      teamId: 'team-3d',
-      teamName: '3-D',
-      ownerName: '3-D',
-      rank: 3,
-      points: 13,
-      avatar: '3',
-      color: '#F59E0B',
-      isCurrentUser: false,
-      goodPicks: [
-        { game: '#1 SEA vs NE', team: 'Sea', conf: 13, note: 'Cashed 13 pts on Seattle' },
-      ],
-      badPicks: [
-        { game: '#2 LAR vs SF', team: 'LAR', conf: 12, note: 'Lost 12 confidence points on Rams' },
-      ],
-      netCarnage: '-12 pts off ceiling',
-      maxRemaining: 124,
-      lossTotal: 12,
-      damageGrade: 'C+ (Heavy Blow)',
-      badge: '⚠️ -12 Pt Casualty',
-      badgeColor: 'bg-amber-950 text-amber-300 border-amber-500/50',
-      outlook: 'Solid 13 points in the bank, but the 12-point hit on LAR leaves very little margin for error on remaining double-digit favorites.',
-    },
-    {
-      teamId: 'team-snap',
-      teamName: 'Snap Judgments',
-      ownerName: 'Snap Judgments',
-      rank: 4,
-      points: 12,
-      avatar: 'J',
-      color: '#14B8A6',
-      isCurrentUser: false,
-      goodPicks: [
-        { game: '#1 SEA vs NE', team: 'Sea', conf: 12, note: 'Cashed 12 pts on Seattle' },
-      ],
-      badPicks: [
-        { game: '#2 LAR vs SF', team: 'LAR', conf: 11, note: 'Lost 11 confidence points on Rams' },
-      ],
-      netCarnage: '-11 pts off ceiling',
-      maxRemaining: 125,
-      lossTotal: 11,
-      damageGrade: 'C+ (Heavy Blow)',
-      badge: '⚠️ -11 Pt Casualty',
-      badgeColor: 'bg-amber-950 text-amber-300 border-amber-500/50',
-      outlook: 'Rank 4 with 12 points. Remains viable if remaining upper-tier picks (13–16) are intact on chalk.',
-    },
-    {
-      teamId: 'team-torts',
-      teamName: 'Torts Illustrated',
-      ownerName: 'Torts Illustrated',
-      rank: 5,
-      points: 11,
-      avatar: 'T',
-      color: '#8B5CF6',
-      isCurrentUser: false,
-      goodPicks: [
-        { game: '#1 SEA vs NE', team: 'Sea', conf: 11, note: 'Cashed 11 pts on Seattle' },
-      ],
-      badPicks: [
-        { game: '#2 LAR vs SF', team: 'LAR', conf: 12, note: 'Lost 12 confidence points on Rams' },
-      ],
-      netCarnage: '-12 pts off ceiling',
-      maxRemaining: 124,
-      lossTotal: 12,
-      damageGrade: 'C (Significant Loss)',
-      badge: '⚠️ -12 Pt Casualty',
-      badgeColor: 'bg-purple-950 text-purple-300 border-purple-500/50',
-      outlook: 'Tied for 5th with 11 points. Must sweep early Sunday window to recover lost ground.',
-    },
-    {
-      teamId: 'team-bijan',
-      teamName: 'Bed Bath & Bijan',
-      ownerName: 'Bed Bath & Bijan',
-      rank: 6,
-      points: 11,
-      avatar: 'B',
-      color: '#06B6D4',
-      isCurrentUser: false,
-      goodPicks: [
-        { game: '#1 SEA vs NE', team: 'Sea', conf: 11, note: 'Cashed 11 pts on Seattle' },
-      ],
-      badPicks: [
-        { game: '#2 LAR vs SF', team: 'LAR', conf: 10, note: 'Lost 10 confidence points on Rams' },
-      ],
-      netCarnage: '-10 pts off ceiling',
-      maxRemaining: 126,
-      lossTotal: 10,
-      damageGrade: 'B- (Moderate Loss)',
-      badge: '⚠️ -10 Pt Casualty',
-      badgeColor: 'bg-cyan-950 text-cyan-300 border-cyan-500/50',
-      outlook: 'Kept the loss under 11 points. Ceiling remains above 125, giving him a solid mid-pack runway.',
-    },
-    {
-      teamId: 'team-niner',
-      teamName: 'Niner Faithful',
-      ownerName: 'Niner Faithful',
-      rank: 7,
-      points: 9,
-      avatar: 'N',
-      color: '#EF4444',
-      isCurrentUser: false,
-      goodPicks: [
-        { game: '#1 SEA vs NE', team: 'Sea', conf: 9, note: 'Cashed 9 pts on Seattle' },
-      ],
-      badPicks: [
-        { game: '#2 LAR vs SF', team: 'LAR', conf: 11, note: '🤦 TRAGIC IRONY: Picked against his own 49ers with 11 pts, watched SF win, and lost 11 confidence pts!' },
-      ],
-      netCarnage: '-11 pts off ceiling',
-      maxRemaining: 125,
-      lossTotal: 11,
-      damageGrade: 'C- (Self-Inflicted Burn)',
-      badge: '🤡 Betrayed Own Team',
-      badgeColor: 'bg-rose-950 text-rose-300 border-rose-500/50',
-      outlook: 'Suffered maximum emotional and mathematical trauma. Picked against San Francisco for 11 points, watched the 49ers pull off the upset, and forfeited 11 points.',
+      outlook: 'CATASTROPHIC HIT: Losing your #1 16-point anchor in Game #2 is the mathematical worst-case scenario. Season ceiling immediately clipped down to 120 max points.',
     },
     {
       teamId: 'team-todd',
@@ -210,7 +97,7 @@ export const EndOfDayRecap: React.FC<EndOfDayRecapProps> = ({
       points: 8,
       avatar: 'C',
       color: '#10B981',
-      isCurrentUser: true,
+      isCurrentUser: currentTeam.id === 'team-todd',
       goodPicks: [
         { game: '#1 SEA vs NE', team: 'Sea', conf: 8, note: 'Prudent 8-pt allocation on Seattle cashed cleanly' },
       ],
@@ -233,7 +120,7 @@ export const EndOfDayRecap: React.FC<EndOfDayRecapProps> = ({
       points: 7,
       avatar: 'B',
       color: '#3B82F6',
-      isCurrentUser: false,
+      isCurrentUser: currentTeam.id === 'team-broncos',
       goodPicks: [
         { game: '#1 SEA vs NE', team: 'Sea', conf: 7, note: 'Cashed 7 pts on Seattle' },
       ],
@@ -248,76 +135,107 @@ export const EndOfDayRecap: React.FC<EndOfDayRecapProps> = ({
       badgeColor: 'bg-blue-950 text-blue-300 border-blue-500/50',
       outlook: 'MASTERCLASS IN HEDGING: Dropped only a single point (1 pt) on the Rams upset! Holds the highest remaining maximum ceiling (135 pts) of any manager who picked the Rams.',
     },
+  ];
+
+  const week2Pickers = [
     {
-      teamId: 'team-bird',
+      teamId: 'team-birdboss',
       teamName: 'Bird Boss',
-      ownerName: 'Bird Boss',
-      rank: 10,
-      points: 6,
-      avatar: 'B',
-      color: '#6366F1',
-      isCurrentUser: false,
+      ownerName: 'Amy',
+      rank: 1,
+      points: 104,
+      avatar: 'BB',
+      color: '#F59E0B',
+      isCurrentUser: currentTeam.id === 'team-birdboss',
       goodPicks: [
-        { game: '#1 SEA vs NE', team: 'Sea', conf: 6, note: 'Cashed 6 pts on Seattle' },
+        { game: 'MIA vs SF', team: 'San Francisco 49ers', conf: 16, note: '🔥 MAXIMUM ANCHOR CASHED: 16 points in 35-13 blowout' },
+        { game: 'LV vs LAC', team: 'Las Vegas Raiders', conf: 15, note: '👑 MASTERSTROKE: Only manager to stake 15 pts on the Raiders upset (26-14)!' },
+        { game: 'IND vs KC', team: 'Kansas City Chiefs', conf: 11, note: 'Cashed 11 pts in SNF 33-30 OT thriller' },
       ],
-      badPicks: [
-        { game: '#2 LAR vs SF', team: 'LAR', conf: 10, note: 'Lost 10 confidence points on Rams' },
-      ],
-      netCarnage: '-10 pts off ceiling',
-      maxRemaining: 126,
-      lossTotal: 10,
-      damageGrade: 'C+ (Moderate Loss)',
-      badge: '⚠️ -10 Pt Casualty',
-      badgeColor: 'bg-indigo-950 text-indigo-300 border-indigo-500/50',
-      outlook: 'Currently 10th with 6 points. Max ceiling is 126. Will need mid-tier leverage games to bounce back into the upper half.',
+      badPicks: [],
+      netCarnage: '+104 pts (Week 2 Champion)',
+      maxRemaining: 104,
+      lossTotal: 32,
+      damageGrade: 'A+ (Champion Payout)',
+      badge: '🏆 Week 2 Champion (104 Pts)',
+      badgeColor: 'bg-amber-950 text-amber-300 border-amber-500/50',
+      outlook: 'CHAMPIONSHIP PERFORMANCE: Amy captured sole 1st place in Week 2 with 104 points and claimed the entire $25.00 weekly prize. Her bold 15-point confidence anchor on the underdog Las Vegas Raiders over the Chargers separated her from the field.',
     },
     {
-      teamId: 'team-limps',
-      teamName: 'Sir Limps-A-Lot',
-      ownerName: 'Sir Limps-A-Lot',
-      rank: 11,
-      points: 4,
-      avatar: 'L',
-      color: '#64748B',
-      isCurrentUser: false,
+      teamId: 'team-shoeman',
+      teamName: 'Shoeman',
+      ownerName: 'Steve',
+      rank: 2,
+      points: 99,
+      avatar: 'SH',
+      color: '#EC4899',
+      isCurrentUser: currentTeam.id === 'team-shoeman',
       goodPicks: [
-        { game: '#1 SEA vs NE', team: 'Sea', conf: 4, note: 'Cashed 4 pts on Seattle' },
+        { game: 'BUF vs DET', team: 'Buffalo Bills', conf: 16, note: 'Cashed 16-pt top anchor on Thursday Night Football (41-31)' },
+        { game: 'MIA vs SF', team: 'San Francisco 49ers', conf: 15, note: 'Cashed 15-pt core anchor in 35-13 rout' },
+        { game: 'ARI vs SEA', team: 'Seattle Seahawks', conf: 12, note: 'Banked 12 pts in 31-7 blowout' },
       ],
-      badPicks: [
-        { game: '#2 LAR vs SF', team: 'LAR', conf: 5, note: 'Lost 5 confidence points on Rams' },
-      ],
-      netCarnage: '-5 pts off ceiling',
-      maxRemaining: 131,
-      lossTotal: 5,
-      damageGrade: 'B+ (Low Anchor Loss)',
-      badge: '🩹 Low Anchor Loss (131 Max)',
-      badgeColor: 'bg-slate-800 text-slate-300 border-slate-600/50',
-      outlook: 'Slow start with only 4 points, but because he only risked 5 points on the Rams, he quietly holds a very high 131-point ceiling.',
+      badPicks: [],
+      netCarnage: '+99 pts (Podium Finish)',
+      maxRemaining: 99,
+      lossTotal: 37,
+      damageGrade: 'A (Runner-Up)',
+      badge: '🥈 2nd Place (99 Pts)',
+      badgeColor: 'bg-cyan-950 text-cyan-300 border-cyan-500/50',
+      outlook: 'RUNNER-UP FINISH: Steve had a stellar week with 99 points, nailing his top two anchors on Buffalo [16] and San Francisco [15]. Finished just 5 points shy of the title.',
     },
     {
-      teamId: 'team-sacks',
-      teamName: 'Sacks and the City',
-      ownerName: 'Sacks and the City',
+      teamId: 'team-broncos',
+      teamName: 'BroncosCountry (PatN)',
+      ownerName: 'Patrick',
+      rank: 3,
+      points: 96,
+      avatar: 'BC',
+      color: '#3B82F6',
+      isCurrentUser: currentTeam.id === 'team-broncos',
+      goodPicks: [
+        { game: 'MIA vs SF', team: 'San Francisco 49ers', conf: 16, note: 'Cashed 16 pts on San Francisco' },
+        { game: 'CIN vs HOU', team: 'Cincinnati Bengals', conf: 3, note: 'Underdog road cash in 20-6 victory' },
+      ],
+      badPicks: [],
+      netCarnage: '+96 pts (Top 3 Finish)',
+      maxRemaining: 96,
+      lossTotal: 40,
+      damageGrade: 'A- (Bronze Finish)',
+      badge: '🥉 3rd Place (96 Pts)',
+      badgeColor: 'bg-blue-950 text-blue-300 border-blue-500/50',
+      outlook: 'BRONZE FINISH: Patrick locked in 96 points for 3rd place, capitalizing on SF (16) and a sharp 3-point road swing on Cincinnati.',
+    },
+    {
+      teamId: 'team-todd',
+      teamName: 'CramItUp Your CramHole Lafleur',
+      ownerName: 'Todd Reimer',
       rank: 12,
-      points: 4,
-      avatar: 'S',
-      color: '#E11D48',
-      isCurrentUser: false,
+      points: 69,
+      avatar: 'TR',
+      color: '#10B981',
+      isCurrentUser: currentTeam.id === 'team-todd',
       goodPicks: [
-        { game: '#1 SEA vs NE', team: 'Sea', conf: 4, note: 'Cashed 4 pts on Seattle' },
+        { game: 'MIA vs SF', team: 'San Francisco 49ers', conf: 16, note: 'Cashed #1 16-point anchor in 35-13 blowout' },
+        { game: 'NYG vs LAR', team: 'Los Angeles Rams', conf: 13, note: 'Banked 13 points on MNF 28-6 victory' },
+        { game: 'TEN vs PHI', team: 'Philadelphia Eagles', conf: 12, note: 'Cashed 12 points in 24-20 battle' },
+        { game: 'IND vs KC', team: 'Kansas City Chiefs', conf: 11, note: 'Banked 11 points in SNF overtime thriller' },
       ],
       badPicks: [
-        { game: '#2 LAR vs SF', team: 'LAR', conf: 12, note: 'Lost 12 confidence points on Rams' },
+        { game: 'CLE vs TB', team: 'Tampa Bay Buccaneers', conf: 15, note: 'Heavy upset: Browns stun Bucs 23-19 (-15 pts)' },
+        { game: 'NO vs BAL', team: 'Baltimore Ravens', conf: 14, note: 'Pool shocker: Saints upset Lamar Jackson 24-17 (-14 pts)' },
       ],
-      netCarnage: '-12 pts off ceiling',
-      maxRemaining: 124,
-      lossTotal: 12,
-      damageGrade: 'C- (Heavy Loss)',
-      badge: '⚠️ -12 Pt Casualty',
-      badgeColor: 'bg-rose-950 text-rose-300 border-rose-500/50',
-      outlook: 'Tied for last place with 4 points after dropping 12 on LAR. Needs an almost perfect Sunday run to climb out of the basement.',
+      netCarnage: '-67 pts (Heavy Upsets Absorbed)',
+      maxRemaining: 69,
+      lossTotal: 67,
+      damageGrade: 'B- (Protected Top Anchor)',
+      badge: '🛡️ 69 Pts (SF 16 Cashed)',
+      badgeColor: 'bg-emerald-950 text-emerald-300 border-emerald-500/50',
+      outlook: 'TOUGH WEEK 2 SLATE: Todd weathered brutal league-wide upsets (Browns over Bucs, Saints over Ravens), but protected his top 16-point anchor on San Francisco, and cashed his late 13, 12, and 11 point allocations to finish with 69 points.',
     },
   ];
+
+  const pickersAnalysis = currentWeek === 2 ? week2Pickers : week1Pickers;
 
   // Filtered list of pickers
   const filteredPickers = pickersAnalysis.filter(p => {
@@ -339,17 +257,19 @@ export const EndOfDayRecap: React.FC<EndOfDayRecapProps> = ({
           <div>
             <div className="flex items-center gap-2 text-xs font-mono text-emerald-400 uppercase tracking-wider font-bold">
               <Calendar className="w-3.5 h-3.5" />
-              <span>Week 1 End-of-Day Gridiron Recap & Outlook</span>
+              <span>Week {currentWeek} End-of-Day Gridiron Recap & Outlook</span>
               <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
-                2 OF 16 FINAL
+                {currentWeek === 2 ? 'ALL 16 OF 16 FINAL • OFFICIAL RESULTS' : '2 OF 16 FINAL'}
               </span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1 flex items-center gap-2.5">
-              <span>The SoFi Upset Bloodbath & Week 1 Trajectory</span>
-              <span className="text-xl">🏈</span>
+              <span>{currentWeek === 2 ? 'Week 2 Championship Wrap: Bird Boss Takes Title (104 Pts)' : 'The SoFi Upset Bloodbath & Week 1 Trajectory'}</span>
+              <span className="text-xl">{currentWeek === 2 ? '🏆' : '🏈'}</span>
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-3xl leading-relaxed">
-              Recap of the 2 settled games, picker-by-picker carnage analysis (good vs bad picks), and mathematical outlook for the remaining 14 games of Week 1.
+              {currentWeek === 2
+                ? 'Official final recap of all 16 games: Amy (Bird Boss) wins the $25 purse with 104 points, Steve (Shoeman) captures 2nd with 99 pts, and Todd finishes with 69 pts.'
+                : 'Recap of the 2 settled games, picker-by-picker carnage analysis (good vs bad picks), and mathematical outlook for the remaining 14 games of Week 1.'}
             </p>
           </div>
 
@@ -388,38 +308,38 @@ export const EndOfDayRecap: React.FC<EndOfDayRecapProps> = ({
 
         {/* 4 Fast-Stat Impact Metric Badges */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-4 border-t border-slate-800/80 font-mono text-xs">
-          <div className="p-3 rounded-xl bg-slate-900/70 border border-slate-800 space-y-1">
-            <span className="text-slate-400 text-[11px]">Seattle Chalk Hit Rate</span>
-            <div className="text-base font-black text-emerald-400 flex items-center gap-1.5">
-              <span>12 / 12 (100%)</span>
-              <CheckCircle2 className="w-3.5 h-3.5" />
-            </div>
-            <span className="text-[10px] text-slate-500">116 total points collected</span>
-          </div>
-
-          <div className="p-3 rounded-xl bg-slate-900/70 border border-red-900/40 space-y-1">
-            <span className="text-red-300 text-[11px]">Rams Carnage Vaporized</span>
-            <div className="text-base font-black text-red-400 flex items-center gap-1.5">
-              <span>114 Points Lost</span>
-              <XCircle className="w-3.5 h-3.5" />
-            </div>
-            <span className="text-[10px] text-slate-500">11 of 12 managers burned</span>
-          </div>
-
           <div className="p-3 rounded-xl bg-slate-900/70 border border-amber-900/40 space-y-1">
-            <span className="text-amber-300 text-[11px]">Current Pool Leader</span>
-            <div className="text-base font-black text-amber-400 truncate">
-              Orange crush (26 pts)
+            <span className="text-amber-300 text-[11px]">{currentWeek === 2 ? 'Week 2 Champion' : 'Seattle Chalk Hit Rate'}</span>
+            <div className="text-base font-black text-amber-400 flex items-center gap-1.5">
+              <span>{currentWeek === 2 ? 'Amy • 104 Pts' : '12 / 12 (100%)'}</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
             </div>
-            <span className="text-[10px] text-slate-500">Hit SF Upset (+10 pts)</span>
+            <span className="text-[10px] text-slate-500">{currentWeek === 2 ? '$25.00 Purse Awarded' : '116 total points collected'}</span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-slate-900/70 border border-cyan-900/40 space-y-1">
+            <span className="text-cyan-300 text-[11px]">{currentWeek === 2 ? 'Week 2 Runner-Up' : 'Rams Carnage Vaporized'}</span>
+            <div className="text-base font-black text-cyan-400 flex items-center gap-1.5">
+              <span>{currentWeek === 2 ? 'Shoeman • 99 Pts' : '114 Points Lost'}</span>
+              {currentWeek === 2 ? <TrendingUp className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+            </div>
+            <span className="text-[10px] text-slate-500">{currentWeek === 2 ? 'Finished 5 pts back' : '11 of 12 managers burned'}</span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-slate-900/70 border border-blue-900/40 space-y-1">
+            <span className="text-blue-300 text-[11px]">{currentWeek === 2 ? 'Week 2 3rd Place' : 'Current Pool Leader'}</span>
+            <div className="text-base font-black text-blue-400 truncate">
+              {currentWeek === 2 ? 'BroncosCountry (96 pts)' : 'Orange crush (26 pts)'}
+            </div>
+            <span className="text-[10px] text-slate-500">{currentWeek === 2 ? 'Hit SF (16) & CIN (3)' : 'Hit SF Upset (+10 pts)'}</span>
           </div>
 
           <div className="p-3 rounded-xl bg-slate-900/70 border border-emerald-900/40 space-y-1">
-            <span className="text-emerald-300 text-[11px]">Todd's Max Ceiling</span>
+            <span className="text-emerald-300 text-[11px]">{currentWeek === 2 ? 'Todd Reimer Finish' : "Todd's Max Ceiling"}</span>
             <div className="text-base font-black text-emerald-400">
-              127 Points
+              {currentWeek === 2 ? '69 Points Final' : '127 Points'}
             </div>
-            <span className="text-[10px] text-slate-500">Top 7 anchors 100% intact</span>
+            <span className="text-[10px] text-slate-500">{currentWeek === 2 ? 'SF #16 + LAR #13 Cashed' : 'Top 7 anchors 100% intact'}</span>
           </div>
         </div>
       </div>
@@ -430,78 +350,144 @@ export const EndOfDayRecap: React.FC<EndOfDayRecapProps> = ({
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-emerald-400" />
             <h3 className="font-bold text-white text-sm uppercase tracking-wider font-mono">
-              1. Completed Game Results & Pool Consequences
+              1. Completed Game Results & Pool Consequences (Week {currentWeek})
             </h3>
           </div>
           <span className="text-xs font-mono text-slate-400">
-            Scores finalized • Week 1 Early Slate
+            {currentWeek === 2 ? 'All 16 Games Settled • Official Final Standings' : 'Scores finalized • Week 1 Early Slate'}
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Game 1: Seattle vs Patriots */}
-          <div className="rounded-xl bg-[#0B0F17] border border-emerald-500/30 p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                GAME #1 • FINAL (CHALK WIN)
-              </span>
-              <span className="text-xs font-mono text-slate-400">Seattle -3.5 vs NE +3.5</span>
-            </div>
+        {currentWeek === 2 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Game 1: 49ers vs Dolphins */}
+            <div className="rounded-xl bg-[#0B0F17] border border-emerald-500/30 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  SUNDAY • UNIVERSAL 16-PT ANCHOR
+                </span>
+                <span className="text-xs font-mono text-slate-400">San Francisco -8.5</span>
+              </div>
 
-            <div className="flex items-center justify-between py-1">
-              <div>
-                <div className="text-lg font-black text-white flex items-center gap-2">
-                  <span className="text-emerald-400">Seattle Seahawks</span>
-                  <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">WINNER</span>
+              <div className="flex items-center justify-between py-1">
+                <div>
+                  <div className="text-lg font-black text-white flex items-center gap-2">
+                    <span className="text-emerald-400">San Francisco 49ers</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">WINNER</span>
+                  </div>
+                  <div className="text-xs text-slate-400">vs Miami Dolphins</div>
                 </div>
-                <div className="text-xs text-slate-400">vs New England Patriots</div>
+                <div className="text-right font-mono">
+                  <span className="text-xl font-black text-emerald-400">SF 35 - MIA 13</span>
+                  <div className="text-[10px] text-slate-400">Universal Chalk Hit</div>
+                </div>
               </div>
-              <div className="text-right font-mono">
-                <span className="text-xl font-black text-emerald-400">SEA WIN</span>
-                <div className="text-[10px] text-slate-400">Final Score: 26 - 20</div>
+
+              <div className="p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-900/40 text-xs text-emerald-200 flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">Heavy Anchors Cashed:</span> Todd (16), Amy (16), Patrick (16), and Gail (16) all locked in max 16 points as the 49ers rolled at Levi’s Stadium.
+                </div>
               </div>
             </div>
 
-            <div className="p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-900/40 text-xs text-emerald-200 flex items-start gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-bold">100% League Consensus:</span> All 12 pool members correctly picked Seattle!
-                Confidence allocated ranged from <span className="font-bold">4 pts</span> (Limps, Sacks) up to <span className="font-bold">16 pts</span> (Orange crush). Todd safely cashed 8 points.
+            {/* Game 2: Raiders vs Chargers - The Championship-Deciding Upset */}
+            <div className="rounded-xl bg-[#0B0F17] border border-amber-500/30 p-4 space-y-3 flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  DECISIVE UPSET • CHAMPION MAKER
+                </span>
+                <span className="text-xs font-mono text-slate-400">LV +3.5 vs LAC -3.5</span>
+              </div>
+
+              <div className="flex items-center justify-between py-1">
+                <div>
+                  <div className="text-lg font-black text-white flex items-center gap-2">
+                    <span className="text-amber-400">Las Vegas Raiders</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">UPSET</span>
+                  </div>
+                  <div className="text-xs text-slate-400">vs Los Angeles Chargers</div>
+                </div>
+                <div className="text-right font-mono">
+                  <span className="text-xl font-black text-amber-400">LV 26 - LAC 14</span>
+                  <div className="text-[10px] text-slate-400">Division Ambush</div>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-amber-950/30 border border-amber-900/40 text-xs text-amber-200 flex items-start gap-2">
+                <Trophy className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">Amy's Winning Masterstroke:</span> Bird Boss was the only manager with a 15-point stake on Las Vegas, swinging the entire week and clinching the $25 purse at 104 pts!
+                </div>
               </div>
             </div>
           </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Game 1: Seattle vs Patriots */}
+            <div className="rounded-xl bg-[#0B0F17] border border-emerald-500/30 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  GAME #1 • FINAL (CHALK WIN)
+                </span>
+                <span className="text-xs font-mono text-slate-400">Seattle -3.5 vs NE +3.5</span>
+              </div>
 
-          {/* Game 2: LA Rams vs SF 49ers */}
-          <div className="rounded-xl bg-[#0B0F17] border border-red-500/40 p-4 space-y-3 shadow-lg shadow-red-950/20">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30">
-                GAME #2 • FINAL (MAJOR UPSET)
-              </span>
-              <span className="text-xs font-mono text-slate-400">LAR -3.5 vs SF +3.5</span>
-            </div>
-
-            <div className="flex items-center justify-between py-1">
-              <div>
-                <div className="text-lg font-black text-white flex items-center gap-2">
-                  <span className="text-amber-400">San Francisco 49ers</span>
-                  <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono font-bold">UPSET WINNER</span>
+              <div className="flex items-center justify-between py-1">
+                <div>
+                  <div className="text-lg font-black text-white flex items-center gap-2">
+                    <span className="text-emerald-400">Seattle Seahawks</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">WINNER</span>
+                  </div>
+                  <div className="text-xs text-slate-400">vs New England Patriots</div>
                 </div>
-                <div className="text-xs text-slate-400">def. Los Angeles Rams (Favored -3.5)</div>
+                <div className="text-right font-mono">
+                  <span className="text-xl font-black text-emerald-400">SEA WIN</span>
+                  <div className="text-[10px] text-slate-400">Final Score: 26 - 20</div>
+                </div>
               </div>
-              <div className="text-right font-mono">
-                <span className="text-xl font-black text-amber-400">SF 17 - LAR 13</span>
-                <div className="text-[10px] text-red-400 font-bold">CARNAGE AT SOFI</div>
+
+              <div className="p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-900/40 text-xs text-emerald-200 flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">100% League Consensus:</span> All 12 pool members correctly picked Seattle!
+                  Confidence allocated ranged from <span className="font-bold">4 pts</span> (Limps, Sacks) up to <span className="font-bold">16 pts</span> (Orange crush). Todd safely cashed 8 points.
+                </div>
               </div>
             </div>
 
-            <div className="p-2.5 rounded-lg bg-red-950/30 border border-red-900/40 text-xs text-red-200 flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-bold">11 of 12 Pickers Vaporized:</span> Only <span className="font-bold text-orange-400">Orange crush</span> picked SF (+10 pts)! All other 11 managers suffered heavy losses on LAR, led by <span className="font-bold text-red-300">Shoeman's 16-point anchor disaster</span>.
+            {/* Game 2: LA Rams vs SF 49ers */}
+            <div className="rounded-xl bg-[#0B0F17] border border-red-500/40 p-4 space-y-3 shadow-lg shadow-red-950/20">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30">
+                  GAME #2 • FINAL (MAJOR UPSET)
+                </span>
+                <span className="text-xs font-mono text-slate-400">LAR -3.5 vs SF +3.5</span>
+              </div>
+
+              <div className="flex items-center justify-between py-1">
+                <div>
+                  <div className="text-lg font-black text-white flex items-center gap-2">
+                    <span className="text-amber-400">San Francisco 49ers</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono font-bold">UPSET WINNER</span>
+                  </div>
+                  <div className="text-xs text-slate-400">def. Los Angeles Rams (Favored -3.5)</div>
+                </div>
+                <div className="text-right font-mono">
+                  <span className="text-xl font-black text-amber-400">SF 17 - LAR 13</span>
+                  <div className="text-[10px] text-red-400 font-bold">CARNAGE AT SOFI</div>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-red-950/30 border border-red-900/40 text-xs text-red-200 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">11 of 12 Pickers Vaporized:</span> Only <span className="font-bold text-orange-400">Orange crush</span> picked SF (+10 pts)! All other 11 managers suffered heavy losses on LAR, led by <span className="font-bold text-red-300">Shoeman's 16-point anchor disaster</span>.
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* SECTION 1.5: CONFIDENTIAL LOCKER ROOM CALLOUT BANNER */}

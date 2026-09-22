@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTeam } from '../context/TeamContext';
 import { AUDIO_TRACKS } from '../data/mockData';
-import { AudioBroadcastTrack } from '../types';
+import { AudioBroadcastTrack, TalkShowSpeaker } from '../types';
 import { EndOfDayRecap } from '../components/EndOfDayRecap';
 import { speechEngine } from '../utils/speechEngine';
 import {
@@ -54,7 +54,7 @@ const GEMINI_VOICES: VoiceOption[] = [
   { id: 'Charon', name: 'Charon', label: '1985 Soldier Field Narrator', gender: 'Male', badge: 'Gritty Legend', desc: 'Gravelly, legendary NFL Films narrator documenting Chicago gridiron triumphs and tragic chokes' },
 ];
 
-export interface CoHostOption {
+export interface HostPersonaOption {
   id: string;
   name: string;
   title: string;
@@ -66,9 +66,26 @@ export interface CoHostOption {
   badge: string;
   tagline: string;
   description: string;
+  promptBio?: string;
 }
 
-export const COHOST_OPTIONS: CoHostOption[] = [
+export type CoHostOption = HostPersonaOption;
+
+export const SPEAKER_PERSONAS: HostPersonaOption[] = [
+  {
+    id: 'sal',
+    name: 'Sal',
+    title: 'Coach Sal "Da Bear" Ditkofsky',
+    role: "Proprietor, Vito & Sal's Beef (35th & Halsted) • 1985 Bears Diehard",
+    archetype: 'South-Side Beef Counter Legend',
+    voiceName: 'Fenrir',
+    avatar: '🥩',
+    color: '#EA580C',
+    badge: 'Fenrir (Ditka Baritone)',
+    tagline: 'Run da damn ball 40 times and punch \'em in da mouth!',
+    description: 'Passionate South-Side Chicago beef counter legend with table slaps, Ditka swagger, and Bears loyalty.',
+    promptBio: 'A 61-year-old South-Side Chicago Italian beef proprietor and 1985 Bears diehard. Speaks with a thick Mike Ditka accent ("da", "dis", "dat", "wit"), loves running the ball, slaps the table, scoffs at computers and fancy analytics.',
+  },
   {
     id: 'chloe',
     name: 'Chloe',
@@ -80,7 +97,8 @@ export const COHOST_OPTIONS: CoHostOption[] = [
     color: '#06B6D4',
     badge: 'Kore (Sharp & Articulate)',
     tagline: 'Expected Points Added > Your gut instinct and beef grease.',
-    description: 'Sips matcha latte, cites EPA/play, Monte Carlo win probability, and tears apart Sal\'s reliance on Polish sausage.',
+    description: 'Sips matcha latte, cites EPA/play, Monte Carlo win probability, and tears apart irrational picks.',
+    promptBio: 'A 28-year-old MIT Sloan analytics director who sips matcha latte, cites Expected Points Added (EPA/play), win-probability charts, and dissects football through cold mathematical regression.',
   },
   {
     id: 'kev',
@@ -94,6 +112,7 @@ export const COHOST_OPTIONS: CoHostOption[] = [
     badge: 'Puck (High-Tempo Screamer)',
     tagline: 'I put my entire 401(k) on Buffalo! Fire the coordinator!',
     description: 'Rapid-fire, caffeine-fueled caller screaming about blown parlays and calling for every coach to be fired.',
+    promptBio: 'A caffeinated, rapid-fire AM 670 sports radio screamer who had heavy confidence on the game, screams about blown picks, interrupts frantically, and demands every coach get fired immediately.',
   },
   {
     id: 'rex',
@@ -107,8 +126,25 @@ export const COHOST_OPTIONS: CoHostOption[] = [
     badge: 'Zephyr (Deep Texas Swagger)',
     tagline: 'If your quarterback can\'t throw a strawberry through a battleship, bench him!',
     description: 'Obsessed with raw arm talent, 60-yard bombs, and old-school stadium tailgates.',
+    promptBio: 'A big-talking Texas football booster with an enormous belt buckle who only cares about raw arm talent, deep 60-yard post routes, and big stadium tailgates, laughing boisterously at cold-weather trench football.',
+  },
+  {
+    id: 'marty',
+    name: 'Marty',
+    title: 'Marty "The Book" Miller',
+    role: 'Vegas Strip Syndicate Sharp & Line Maker',
+    archetype: 'Vegas Closing Line Sharp',
+    voiceName: 'Charon',
+    avatar: '🎲',
+    color: '#10B981',
+    badge: 'Charon (Gritty Legend)',
+    tagline: 'The public buys tickets; the sharps cash the tickets.',
+    description: 'Cynical desert oddsmaker tracking steam moves, weather anomalies, and backdoor covers.',
+    promptBio: 'A grizzled Las Vegas syndicate oddsmaker who speaks in a low, gravelly rasp about closing line value (CLV), steam chasers, referee tendencies, and backdoor covers.',
   },
 ];
+
+export const COHOST_OPTIONS: HostPersonaOption[] = SPEAKER_PERSONAS;
 
 interface StylePreset {
   id: string;
@@ -154,9 +190,13 @@ export const Watercooler: React.FC = () => {
     games,
     activeSweatGame,
     setIsYahooSyncModalOpen,
+    currentWeek,
+    setCurrentWeek,
   } = useTeam();
   const [playlist, setPlaylist] = useState<AudioBroadcastTrack[]>(AUDIO_TRACKS);
-  const [activeTrack, setActiveTrack] = useState<AudioBroadcastTrack>(AUDIO_TRACKS[0]);
+  const [activeTrack, setActiveTrack] = useState<AudioBroadcastTrack>(
+    currentWeek === 2 ? AUDIO_TRACKS.find(t => t.id === 'track-1-w2') || AUDIO_TRACKS[0] : AUDIO_TRACKS[0]
+  );
 
   // Audio Playback & Synthesis State
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -166,11 +206,23 @@ export const Watercooler: React.FC = () => {
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [volume, setVolume] = useState<number>(1.0);
 
-  // Talk Show Multi-Speaker Gemini TTS Configuration
-  const [selectedVoice1, setSelectedVoice1] = useState<string>('Fenrir');
-  const [selectedVoice2, setSelectedVoice2] = useState<string>('Kore');
-  const [selectedCohostId, setSelectedCohostId] = useState<string>('chloe');
-  const [selectedStyleId, setSelectedStyleId] = useState<string>('rapid_crossfire');
+  // Talk Show Multi-Speaker Gemini TTS Configuration with persistent localStorage
+  const [selectedSpeaker1PersonaId, setSelectedSpeaker1PersonaId] = useState<string>(() => {
+    return localStorage.getItem('watercooler_speaker1_persona') || 'sal';
+  });
+  const [selectedVoice1, setSelectedVoice1] = useState<string>(() => {
+    return localStorage.getItem('watercooler_voice1') || 'Fenrir';
+  });
+  const [selectedVoice2, setSelectedVoice2] = useState<string>(() => {
+    return localStorage.getItem('watercooler_voice2') || 'Kore';
+  });
+  const [selectedCohostId, setSelectedCohostId] = useState<string>(() => {
+    return localStorage.getItem('watercooler_cohost') || 'chloe';
+  });
+  const [selectedStyleId, setSelectedStyleId] = useState<string>(() => {
+    return localStorage.getItem('watercooler_style') || 'rapid_crossfire';
+  });
+  const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
   const [isSynthesizing, setIsSynthesizing] = useState<boolean>(false);
   const [synthesisError, setSynthesisError] = useState<string | null>(null);
   const [activeModelUsed, setActiveModelUsed] = useState<string>('gemini-3.1-flash-tts-preview');
@@ -178,6 +230,21 @@ export const Watercooler: React.FC = () => {
   const [ttsQuotaExceeded, setTtsQuotaExceeded] = useState<boolean>(false);
   const [isHighDemand, setIsHighDemand] = useState<boolean>(false);
   const [ttsNotice, setTtsNotice] = useState<string | null>(null);
+
+  const handleSaveVoiceConfig = () => {
+    localStorage.setItem('watercooler_speaker1_persona', selectedSpeaker1PersonaId);
+    localStorage.setItem('watercooler_voice1', selectedVoice1);
+    localStorage.setItem('watercooler_voice2', selectedVoice2);
+    localStorage.setItem('watercooler_cohost', selectedCohostId);
+    localStorage.setItem('watercooler_style', selectedStyleId);
+    const spk1Obj = SPEAKER_PERSONAS.find(p => p.id === selectedSpeaker1PersonaId) || SPEAKER_PERSONAS[0];
+    const cohostObj = SPEAKER_PERSONAS.find(c => c.id === selectedCohostId) || SPEAKER_PERSONAS[1];
+    const styleObj = STYLE_PRESETS.find(s => s.id === selectedStyleId) || STYLE_PRESETS[0];
+    setSaveFeedback(`✓ Saved: ${spk1Obj.name} (${selectedVoice1}) & ${cohostObj.name} (${selectedVoice2}) • ${styleObj.label}`);
+    setTimeout(() => {
+      setSaveFeedback(null);
+    }, 4000);
+  };
 
   // Check TTS engine quota status on load
   useEffect(() => {
@@ -204,7 +271,8 @@ export const Watercooler: React.FC = () => {
   const [watercoolerTab, setWatercoolerTab] = useState<'recap' | 'broadcast' | 'chat' | 'all'>('recap');
 
   const handlePlayRecapAudio = () => {
-    const recapTrack = playlist.find(t => t.id === 'track-1') || playlist[0];
+    const targetTrackId = currentWeek === 2 ? 'track-1-w2' : 'track-1';
+    const recapTrack = playlist.find(t => t.id === targetTrackId) || playlist.find(t => t.id === 'track-1') || playlist[0];
     switchTrack(recapTrack);
     setWatercoolerTab('all');
     setTimeout(() => {
@@ -217,9 +285,15 @@ export const Watercooler: React.FC = () => {
   };
 
   const handlePostRecapToChat = () => {
-    addComment(
-      "🤖 [The Commish AI - End of Day Carnage Report]: SoFi Stadium claimed 11 of 12 pool managers on the Rams (-114 total pts). Only Orange crush hit San Francisco (+10) to seize 1st place with 26 pts. Meanwhile, Todd Reimer holds a league-leading 127 maximum possible points with all top 7 anchors intact for Sunday!"
-    );
+    if (currentWeek === 2) {
+      addComment(
+        "🤖 [The Commish AI - Week 2 Official Final Report]: Week 2 is in the books! Amy (Bird Boss) has been crowned Champion with 104 points, taking home the entire $25.00 weekly purse! Her 15-pt Las Vegas upset pick was the masterstroke of the week. Steve (Shoeman) captured 2nd place with 99 pts, while Todd Reimer concluded a turbulent slate at 69 pts with SF (16) and LAR (13) in hand."
+      );
+    } else {
+      addComment(
+        "🤖 [The Commish AI - End of Day Carnage Report]: SoFi Stadium claimed 11 of 12 pool managers on the Rams (-114 total pts). Only Orange crush hit San Francisco (+10) to seize 1st place with 26 pts. Meanwhile, Todd Reimer holds a league-leading 127 maximum possible points with all top 7 anchors intact for Sunday!"
+      );
+    }
     setWatercoolerTab('all');
     setTimeout(() => {
       const chatEl = document.getElementById('trash-talk-chat');
@@ -251,6 +325,29 @@ export const Watercooler: React.FC = () => {
     setDuration(estDuration);
     setCurrentTime(0);
 
+    if (track.dialogueTurns && track.dialogueTurns.length > 0) {
+      speechEngine.speakDialogue(track.dialogueTurns, {
+        speaker1Name: track.speaker1?.name || activeSpeaker1Persona.name,
+        speaker2Name: track.speaker2?.name || activeCohost.name,
+        speaker1Voice: selectedVoice1,
+        speaker2Voice: selectedVoice2,
+        styleId: selectedStyleId,
+        rate: playbackSpeed,
+        volume: isMuted ? 0 : volume,
+        onStart: () => setIsPlaying(true),
+        onSentenceChange: (idx, _sentence, total) => {
+          const progressTime = Math.min(estDuration, Math.round(((idx + 0.5) / total) * estDuration));
+          setCurrentTime(progressTime);
+        },
+        onEnd: () => {
+          stopAllPlayback();
+          setCurrentTime(0);
+        },
+        onError: () => stopAllPlayback(),
+      });
+      return;
+    }
+
     const primarySpeaker = track.speaker1?.name?.toLowerCase().includes('chloe') ? 'chloe' : 'sal';
 
     speechEngine.speakScript(textToSpeak, {
@@ -274,7 +371,8 @@ export const Watercooler: React.FC = () => {
     });
   };
   const activeStyle = STYLE_PRESETS.find(s => s.id === selectedStyleId) || STYLE_PRESETS[0];
-  const activeCohost = COHOST_OPTIONS.find(c => c.id === selectedCohostId) || COHOST_OPTIONS[0];
+  const activeSpeaker1Persona = SPEAKER_PERSONAS.find(p => p.id === selectedSpeaker1PersonaId) || SPEAKER_PERSONAS[0];
+  const activeCohost = SPEAKER_PERSONAS.find(c => c.id === selectedCohostId) || SPEAKER_PERSONAS[1];
 
   // Dynamic speaker detection for live talk show avatar pulse
   const turnsCount = activeTrack.dialogueTurns?.length || 0;
@@ -283,11 +381,18 @@ export const Watercooler: React.FC = () => {
     : -1;
   const activeSpeakerName = activeTurnIndex >= 0 ? activeTrack.dialogueTurns![activeTurnIndex]?.speaker : null;
 
-  // Unique cache key for track + voices + style
+  // Unique cache key for track + personas + voices + style
   const currentCacheKey = activeTrack.isMultiSpeaker
-    ? `${activeTrack.id}-${selectedVoice1}-${selectedVoice2}-${selectedStyleId}`
+    ? `${activeTrack.id}-${selectedSpeaker1PersonaId}-${selectedCohostId}-${selectedVoice1}-${selectedVoice2}-${selectedStyleId}`
     : `${activeTrack.id}-${selectedVoice1}-${selectedStyleId}`;
-  const currentAudioUrl = audioUrlMap[currentCacheKey] || activeTrack.audioUrl;
+
+  // Only fall back to pre-recorded track.audioUrl if the active track's voices & style match what's selected!
+  const defaultVoicesMatch =
+    (!activeTrack.speaker1 || activeTrack.speaker1.voiceName === selectedVoice1) &&
+    (!activeTrack.speaker2 || activeTrack.speaker2.voiceName === selectedVoice2) &&
+    selectedStyleId === 'rapid_crossfire';
+
+  const currentAudioUrl = audioUrlMap[currentCacheKey] || (defaultVoicesMatch ? activeTrack.audioUrl : undefined);
 
   // Initialize or clean up HTMLAudioElement
   useEffect(() => {
@@ -340,7 +445,7 @@ export const Watercooler: React.FC = () => {
   ): Promise<string | null> => {
     const isMulti = Boolean(track.isMultiSpeaker || track.speaker1 || track.dialogueTurns);
     const key = isMulti
-      ? `${track.id}-${voice1}-${voice2}-${selectedStyleId}`
+      ? `${track.id}-${selectedSpeaker1PersonaId}-${selectedCohostId}-${voice1}-${voice2}-${selectedStyleId}`
       : `${track.id}-${voice1}-${selectedStyleId}`;
 
     if (audioUrlMap[key]) {
@@ -365,8 +470,8 @@ export const Watercooler: React.FC = () => {
           isMultiSpeaker: isMulti,
           speakerVoiceConfigs: isMulti
             ? [
-                { speaker: track.speaker1?.name || 'Sal', voiceName: voice1 },
-                { speaker: track.speaker2?.name || 'Chloe', voiceName: voice2 },
+                { speaker: track.speaker1?.name || activeSpeaker1Persona.name, voiceName: voice1 },
+                { speaker: track.speaker2?.name || activeCohost.name, voiceName: voice2 },
               ]
             : undefined,
         }),
@@ -594,31 +699,37 @@ export const Watercooler: React.FC = () => {
 
   // Regenerates the script with Gemini LLM AND synthesizes multi-speaker audio based on selected speakers & debate cadence
   const handleApplyAndRegenerateScript = async () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    }
+    stopAllPlayback();
     setIsGeneratingShow(true);
     setIsSynthesizing(true);
     setSynthesisError(null);
 
+    // Persist user choices immediately
+    localStorage.setItem('watercooler_speaker1_persona', selectedSpeaker1PersonaId);
+    localStorage.setItem('watercooler_voice1', selectedVoice1);
+    localStorage.setItem('watercooler_voice2', selectedVoice2);
+    localStorage.setItem('watercooler_cohost', selectedCohostId);
+    localStorage.setItem('watercooler_style', selectedStyleId);
+
     try {
       const sortedTeams = [...teams].sort((a, b) => b.actualPoints - a.actualPoints);
-      const topTeam = sortedTeams[0] || currentTeam;
-      const secondTeam = sortedTeams[1] || currentTeam;
-      const sweatMatchup = activeSweatGame ? `${activeSweatGame.awayTeamCode} vs ${activeSweatGame.homeTeamCode}` : 'BUF vs KC';
-      const margin = activeSweatGame ? Math.abs(activeSweatGame.homeScore - activeSweatGame.awayScore) || 3 : 3;
+      const topTeam = currentWeek === 2 ? { ownerName: 'Amy', teamName: 'Bird Boss' } : (sortedTeams[0] || currentTeam);
+      const secondTeam = currentWeek === 2 ? { ownerName: 'Steve', teamName: 'Shoeman' } : (sortedTeams[1] || currentTeam);
+      const sweatMatchup = currentWeek === 2 ? 'LV @ BAL (+15 pt dog upset)' : (activeSweatGame ? `${activeSweatGame.awayTeamCode} vs ${activeSweatGame.homeTeamCode}` : 'BUF vs KC');
+      const margin = currentWeek === 2 ? 5 : (activeSweatGame ? Math.abs(activeSweatGame.homeScore - activeSweatGame.awayScore) || 3 : 3);
 
       const res = await fetch('/api/broadcast/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          weekNumber: activeSweatGame?.weekNumber || 1,
+          weekNumber: currentWeek || 2,
           winner: `${topTeam.ownerName} (${topTeam.teamName})`,
           chaser: `${secondTeam.ownerName} (${secondTeam.teamName})`,
           sweatGame: sweatMatchup,
           margin,
           leagueGroup: 'The Initech Invitational',
+          speaker1Persona: selectedSpeaker1PersonaId,
+          speaker2Persona: selectedCohostId,
           speaker1Voice: selectedVoice1,
           speaker2Voice: selectedVoice2,
           cohostArchetype: selectedCohostId,
@@ -635,32 +746,62 @@ export const Watercooler: React.FC = () => {
       const data = await res.json();
       const trackId = `track-${Date.now()}`;
 
+      const speaker1Data: TalkShowSpeaker = {
+        id: activeSpeaker1Persona.id,
+        name: data.speaker_1?.name || activeSpeaker1Persona.name,
+        voiceName: selectedVoice1,
+        title: activeSpeaker1Persona.title,
+        role: activeSpeaker1Persona.role,
+        avatar: activeSpeaker1Persona.avatar,
+        color: activeSpeaker1Persona.color,
+        tagline: activeSpeaker1Persona.tagline,
+        archetype: activeSpeaker1Persona.archetype
+      };
+
+      const speaker2Data: TalkShowSpeaker = {
+        id: activeCohost.id,
+        name: data.speaker_2?.name || activeCohost.name,
+        voiceName: selectedVoice2,
+        title: activeCohost.title,
+        role: activeCohost.role,
+        avatar: activeCohost.avatar,
+        color: activeCohost.color,
+        tagline: activeCohost.tagline,
+        archetype: activeCohost.archetype
+      };
+
       const newTrack: AudioBroadcastTrack = {
         id: trackId,
         title: data.headline || `🎙️ Halsted & Ivy: "${data.show_title || 'The Gridiron Dispute'}"`,
-        subtitle: `Coach Sal & ${data.speaker_2?.name || activeCohost.name} • ${activeStyle.label}`,
+        subtitle: `${speaker1Data.name} (${selectedVoice1}) & ${speaker2Data.name} (${selectedVoice2}) • ${activeStyle.label}`,
         duration: data.durationSeconds ? `00:${data.durationSeconds < 10 ? '0' : ''}${data.durationSeconds}` : '01:28',
         durationSeconds: data.durationSeconds || 88,
         category: 'radio',
         accentColor: activeCohost.color || '#EA580C',
         icon: activeCohost.avatar || '🎙️',
-        soundStyle: `${activeStyle.label} • (${data.speaker_1?.name || 'Sal'} & ${data.speaker_2?.name || activeCohost.name})`,
+        soundStyle: `${activeStyle.label} • (${speaker1Data.name} & ${speaker2Data.name})`,
         scriptText: data.radio_script_text,
         audioUrl: data.audioUrl,
-        voiceName: `${data.speaker_1?.voiceName || selectedVoice1} + ${data.speaker_2?.voiceName || selectedVoice2}`,
+        voiceName: `${selectedVoice1} + ${selectedVoice2}`,
         modelUsed: data.modelUsed || 'gemini-3.1-flash-tts-preview',
         characterPersona: data.character_persona,
         sceneBackstory: data.scene_backstory,
-        directorsNotes: data.directors_notes,
+        directorsNotes: `${activeStyle.prompt}. Speaker 1 (${selectedVoice1}) is ${speaker1Data.name}. Speaker 2 (${selectedVoice2}) is ${speaker2Data.name}.`,
         fullPromptPayload: data.full_tts_prompt,
         isMultiSpeaker: true,
-        speaker1: data.speaker_1,
-        speaker2: data.speaker_2,
-        dialogueTurns: data.dialogue_turns,
+        speaker1: speaker1Data,
+        speaker2: speaker2Data,
+        dialogueTurns: data.dialogue_turns || [
+          { speaker: speaker1Data.name, text: `Hold the phone! We got ${speaker2Data.name} in the studio. You see what happened in Week 2? Amy took the whole twenty-five dollar purse with Las Vegas at Baltimore!` },
+          { speaker: speaker2Data.name, text: `${speaker1Data.name}, the closing line value was insane. Lamar had them at the goal line, but Gardner Minshew threw fire.` },
+          { speaker: speaker1Data.name, text: `Fire? He threw luck into the Chesapeake Bay! Shoeman Steve was sitting pretty until that final field goal!` },
+          { speaker: speaker2Data.name, text: `Steve still walks away with second place at ninety-nine points, but Todd Reimer got completely flattened with sixteen points on San Francisco.` },
+          { speaker: speaker1Data.name, text: `Sixteen points on Shanahan against Sam Darnold?! Gimme a break! Next week Todd's gonna need a double order of Italian beef just to recover!` }
+        ],
       };
 
+      const key = `${trackId}-${selectedSpeaker1PersonaId}-${selectedCohostId}-${selectedVoice1}-${selectedVoice2}-${selectedStyleId}`;
       if (data.audioUrl) {
-        const key = `${trackId}-${selectedVoice1}-${selectedVoice2}-${selectedStyleId}`;
         setAudioUrlMap(prev => ({
           ...prev,
           [key]: data.audioUrl,
@@ -678,18 +819,24 @@ export const Watercooler: React.FC = () => {
         setActiveModelUsed(data.modelUsed);
       }
 
-      if (data.audioUrl && audioRef.current) {
+      setSaveFeedback(`✓ Generated & Applied: ${speaker1Data.name} (${selectedVoice1}) & ${speaker2Data.name} (${selectedVoice2}) in "${activeStyle.label}" cadence!`);
+
+      if (data.audioUrl && !data.fallbackToSpeechSynthesis && audioRef.current) {
         audioRef.current.src = data.audioUrl;
         audioRef.current.load();
         try {
           await audioRef.current.play();
           setIsPlaying(true);
         } catch (playErr) {
-          console.warn('Playback autoplay was blocked by browser:', playErr);
+          console.warn('Playback autoplay was blocked by browser, switching to speech engine:', playErr);
+          playTrackWithSpeechSynthesis(newTrack);
         }
+      } else {
+        // Immediately synthesize using multi-speaker alternating speech engine with selected voices & cadence
+        playTrackWithSpeechSynthesis(newTrack);
       }
 
-      addComment(`🎙️ [Halsted & Ivy Studio]: Fresh script generated for Coach Sal & ${activeCohost.name} in "${activeStyle.label}" cadence!`);
+      addComment(`🎙️ [Halsted & Ivy Studio]: Fresh script generated for ${speaker1Data.name} (${selectedVoice1}) & ${speaker2Data.name} (${selectedVoice2}) in "${activeStyle.label}" cadence!`);
     } catch (e: any) {
       console.error('Failed to regenerate script and broadcast:', e);
       setSynthesisError(e.message || 'Failed to regenerate broadcast show.');
@@ -838,9 +985,37 @@ export const Watercooler: React.FC = () => {
           </button>
         </div>
 
-        <div className="hidden lg:flex items-center gap-2 text-xs font-mono text-slate-400 pr-2">
-          <span>League Live Status:</span>
-          <span className="text-emerald-400 font-bold">14 Games Remaining</span>
+        <div className="flex items-center gap-3 pr-2">
+          {/* Week Toggle */}
+          <div className="flex items-center bg-[#0B0F17] rounded-lg p-0.5 border border-slate-700/80">
+            <button
+              onClick={() => setCurrentWeek(1)}
+              className={`px-2.5 py-1 rounded text-xs font-mono font-bold transition cursor-pointer ${
+                currentWeek === 1
+                  ? 'bg-amber-500 text-slate-950 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Wk 1
+            </button>
+            <button
+              onClick={() => setCurrentWeek(2)}
+              className={`px-2.5 py-1 rounded text-xs font-mono font-bold transition cursor-pointer ${
+                currentWeek === 2
+                  ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Wk 2 Final
+            </button>
+          </div>
+
+          <div className="hidden lg:flex items-center gap-2 text-xs font-mono text-slate-400">
+            <span>Status:</span>
+            <span className="text-emerald-400 font-bold">
+              {currentWeek === 2 ? 'All 16 Games Final • Bird Boss Champion (104 pts)' : '14 Games Remaining (2 Final)'}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -857,121 +1032,161 @@ export const Watercooler: React.FC = () => {
         <div id="talk-show-player" className="space-y-8 animate-in fade-in duration-300">
           {/* DUAL-HOST ON-AIR BROADCAST DECK */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Host 1: Coach Sal Ditkofsky */}
-        <div className={`rounded-xl p-4 border transition-all duration-300 bg-gradient-to-br from-[#121927] to-[#0D121D] ${
-          isPlaying && (activeSpeakerName === 'Sal' || activeSpeakerName === 'Coach Sal' || (!activeSpeakerName && currentTime > 0))
-            ? 'border-orange-500 shadow-lg shadow-orange-950/50 ring-1 ring-orange-500/50'
-            : 'border-slate-800'
-        }`}>
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-orange-950/80 border border-orange-700/60 flex items-center justify-center text-2xl shadow-inner shrink-0">
-                🥩
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-black text-white tracking-tight">Coach Sal Ditkofsky</h4>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-orange-950 text-orange-400 border border-orange-800">
-                    Host 1 • Ditka Cadence
-                  </span>
+          {/* Host 1: Dynamic Character Persona & Profile */}
+          <div className={`rounded-xl p-4 border transition-all duration-300 bg-gradient-to-br from-[#121927] to-[#0D121D] ${
+            isPlaying && (activeSpeakerName === activeSpeaker1Persona.name || (!activeSpeakerName && currentTime > 0))
+              ? 'border-orange-500 shadow-lg shadow-orange-950/50 ring-1 ring-orange-500/50'
+              : 'border-slate-800'
+          }`}>
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-12 h-12 rounded-xl border flex items-center justify-center text-2xl shadow-inner shrink-0"
+                  style={{ backgroundColor: `${activeSpeaker1Persona.color}20`, borderColor: activeSpeaker1Persona.color }}
+                >
+                  {activeSpeaker1Persona.avatar}
                 </div>
-                <p className="text-xs text-slate-400">
-                  Proprietor, Vito & Sal's Beef (35th & Halsted) • Chicago Bears Diehard
-                </p>
-              </div>
-            </div>
-
-            {isPlaying && (activeSpeakerName === 'Sal' || activeSpeakerName === 'Coach Sal' || !activeSpeakerName) && (
-              <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-orange-500/20 border border-orange-500/40 text-[10px] font-mono text-orange-300 animate-pulse">
-                <span className="w-2 h-2 rounded-full bg-orange-500 animate-ping"></span>
-                <span>ON AIR</span>
-              </span>
-            )}
-          </div>
-
-          <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-mono">
-            <span className="text-slate-400">
-              Voice: <span className="text-orange-300 font-bold">{selectedVoice1}</span> (Gravelly Baritone)
-            </span>
-            <span className="text-slate-500 italic">"Gimme double giardiniera on that take!"</span>
-          </div>
-        </div>
-
-        {/* Host 2: Co-Host Switcher & Profile */}
-        <div className={`rounded-xl p-4 border transition-all duration-300 bg-gradient-to-br from-[#121927] to-[#0D121D] ${
-          isPlaying && activeSpeakerName && activeSpeakerName !== 'Sal' && activeSpeakerName !== 'Coach Sal'
-            ? 'border-cyan-500 shadow-lg shadow-cyan-950/50 ring-1 ring-cyan-500/50'
-            : 'border-slate-800'
-        }`}>
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div
-                className="w-12 h-12 rounded-xl border flex items-center justify-center text-2xl shadow-inner shrink-0"
-                style={{ backgroundColor: `${activeCohost.color}20`, borderColor: activeCohost.color }}
-              >
-                {activeCohost.avatar}
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-black text-white tracking-tight">{activeCohost.title}</h4>
-                  <span
-                    className="text-[10px] font-mono px-2 py-0.5 rounded border"
-                    style={{ backgroundColor: `${activeCohost.color}20`, borderColor: activeCohost.color, color: activeCohost.color }}
-                  >
-                    Host 2 • {activeCohost.archetype}
-                  </span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-black text-white tracking-tight">{activeSpeaker1Persona.title}</h4>
+                    <span
+                      className="text-[10px] font-mono px-2 py-0.5 rounded border"
+                      style={{ backgroundColor: `${activeSpeaker1Persona.color}20`, borderColor: activeSpeaker1Persona.color, color: activeSpeaker1Persona.color }}
+                    >
+                      Host 1 • {activeSpeaker1Persona.archetype}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    {activeSpeaker1Persona.role}
+                  </p>
                 </div>
-                <p className="text-xs text-slate-400">
-                  {activeCohost.role}
-                </p>
+              </div>
+
+              {isPlaying && (activeSpeakerName === activeSpeaker1Persona.name || !activeSpeakerName) && (
+                <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-orange-500/20 border border-orange-500/40 text-[10px] font-mono text-orange-300 animate-pulse">
+                  <span className="w-2 h-2 rounded-full bg-orange-500 animate-ping"></span>
+                  <span>ON AIR</span>
+                </span>
+              )}
+            </div>
+
+            {/* Host 1 Quick Switcher Pills */}
+            <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
+              <span className="text-slate-400">Switch Speaker 1:</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {SPEAKER_PERSONAS.map(p => {
+                  const isActive = selectedSpeaker1PersonaId === p.id;
+                  return (
+                    <button
+                      key={`h1-${p.id}`}
+                      onClick={() => {
+                        setSelectedSpeaker1PersonaId(p.id);
+                        setSelectedVoice1(p.voiceName);
+                        localStorage.setItem('watercooler_speaker1_persona', p.id);
+                        localStorage.setItem('watercooler_voice1', p.voiceName);
+                      }}
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono transition flex items-center gap-1 cursor-pointer ${
+                        isActive
+                          ? 'bg-orange-950 text-orange-200 border border-orange-500 font-bold shadow'
+                          : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200'
+                      }`}
+                    >
+                      <span>{p.avatar}</span>
+                      <span>{p.name}</span>
+                    </button>
+                  );
+                })}
+
+                <button
+                  onClick={handleApplyAndRegenerateScript}
+                  disabled={isSynthesizing || isGeneratingShow}
+                  className="ml-1 px-2.5 py-1 rounded bg-orange-600/90 hover:bg-orange-500 disabled:opacity-50 text-white font-bold text-[10px] flex items-center gap-1 cursor-pointer transition shadow"
+                  title="Regenerate script and audio with newly selected Speaker 1 persona"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isSynthesizing || isGeneratingShow ? 'animate-spin' : ''}`} />
+                  <span>Apply</span>
+                </button>
               </div>
             </div>
-
-            {isPlaying && activeSpeakerName && activeSpeakerName !== 'Sal' && activeSpeakerName !== 'Coach Sal' && (
-              <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-cyan-500/20 border border-cyan-500/40 text-[10px] font-mono text-cyan-300 animate-pulse">
-                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-                <span>ON AIR</span>
-              </span>
-            )}
           </div>
 
-          {/* Co-Host Quick Switcher Pills */}
-          <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
-            <span className="text-slate-400">Switch Co-Host:</span>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {COHOST_OPTIONS.map(c => {
-                const isActive = selectedCohostId === c.id;
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => {
-                      setSelectedCohostId(c.id);
-                      setSelectedVoice2(c.voiceName);
-                    }}
-                    className={`px-2 py-0.5 rounded text-[10px] font-mono transition flex items-center gap-1 cursor-pointer ${
-                      isActive
-                        ? 'bg-slate-700 text-white border border-slate-500 font-bold shadow'
-                        : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200'
-                    }`}
-                  >
-                    <span>{c.avatar}</span>
-                    <span>{c.name}</span>
-                  </button>
-                );
-              })}
+          {/* Host 2: Co-Host Switcher & Profile */}
+          <div className={`rounded-xl p-4 border transition-all duration-300 bg-gradient-to-br from-[#121927] to-[#0D121D] ${
+            isPlaying && activeSpeakerName === activeCohost.name
+              ? 'border-cyan-500 shadow-lg shadow-cyan-950/50 ring-1 ring-cyan-500/50'
+              : 'border-slate-800'
+          }`}>
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-12 h-12 rounded-xl border flex items-center justify-center text-2xl shadow-inner shrink-0"
+                  style={{ backgroundColor: `${activeCohost.color}20`, borderColor: activeCohost.color }}
+                >
+                  {activeCohost.avatar}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-black text-white tracking-tight">{activeCohost.title}</h4>
+                    <span
+                      className="text-[10px] font-mono px-2 py-0.5 rounded border"
+                      style={{ backgroundColor: `${activeCohost.color}20`, borderColor: activeCohost.color, color: activeCohost.color }}
+                    >
+                      Host 2 • {activeCohost.archetype}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    {activeCohost.role}
+                  </p>
+                </div>
+              </div>
 
-              <button
-                onClick={handleApplyAndRegenerateScript}
-                disabled={isSynthesizing || isGeneratingShow}
-                className="ml-1 px-2.5 py-1 rounded bg-orange-600/90 hover:bg-orange-500 disabled:opacity-50 text-white font-bold text-[10px] flex items-center gap-1 cursor-pointer transition shadow"
-                title="Regenerate script and audio with newly selected co-host and cadence"
-              >
-                <RefreshCw className={`w-3 h-3 ${isSynthesizing || isGeneratingShow ? 'animate-spin' : ''}`} />
-                <span>Apply</span>
-              </button>
+              {isPlaying && activeSpeakerName === activeCohost.name && (
+                <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-cyan-500/20 border border-cyan-500/40 text-[10px] font-mono text-cyan-300 animate-pulse">
+                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                  <span>ON AIR</span>
+                </span>
+              )}
+            </div>
+
+            {/* Co-Host Quick Switcher Pills */}
+            <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
+              <span className="text-slate-400">Switch Speaker 2:</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {SPEAKER_PERSONAS.map(c => {
+                  const isActive = selectedCohostId === c.id;
+                  return (
+                    <button
+                      key={`h2-${c.id}`}
+                      onClick={() => {
+                        setSelectedCohostId(c.id);
+                        setSelectedVoice2(c.voiceName);
+                        localStorage.setItem('watercooler_cohost', c.id);
+                        localStorage.setItem('watercooler_voice2', c.voiceName);
+                      }}
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono transition flex items-center gap-1 cursor-pointer ${
+                        isActive
+                          ? 'bg-cyan-950 text-cyan-200 border border-cyan-500 font-bold shadow'
+                          : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200'
+                      }`}
+                    >
+                      <span>{c.avatar}</span>
+                      <span>{c.name}</span>
+                    </button>
+                  );
+                })}
+
+                <button
+                  onClick={handleApplyAndRegenerateScript}
+                  disabled={isSynthesizing || isGeneratingShow}
+                  className="ml-1 px-2.5 py-1 rounded bg-orange-600/90 hover:bg-orange-500 disabled:opacity-50 text-white font-bold text-[10px] flex items-center gap-1 cursor-pointer transition shadow"
+                  title="Regenerate script and audio with newly selected co-host and cadence"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isSynthesizing || isGeneratingShow ? 'animate-spin' : ''}`} />
+                  <span>Apply</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
       </div>
 
       {/* AUTOMATED POSTGAME SHOW PLAYER COMPONENT (Multi-Speaker Gemini TTS Powered) */}
@@ -990,7 +1205,7 @@ export const Watercooler: React.FC = () => {
                 </span>
               </h3>
               <p className="text-xs text-slate-400 font-mono">
-                Speakers: <span className="text-orange-300 font-bold">Sal ({selectedVoice1})</span> + <span className="text-cyan-300 font-bold">{activeCohost.name} ({selectedVoice2})</span> • Style: <span className="text-slate-200">{activeStyle.label}</span>
+                Speakers: <span className="text-orange-300 font-bold">{activeSpeaker1Persona.name} ({selectedVoice1})</span> + <span className="text-cyan-300 font-bold">{activeCohost.name} ({selectedVoice2})</span> • Style: <span className="text-slate-200">{activeStyle.label}</span>
               </p>
             </div>
           </div>
@@ -1050,23 +1265,59 @@ export const Watercooler: React.FC = () => {
                 </h4>
               </div>
               <span className="text-[11px] text-slate-400 font-mono">
-                Assigns independent vocal configs to each debate partner
+                Assigns independent persona & vocal configs to each debate partner
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               
-              {/* Speaker 1 Voice Selector (Coach Sal) */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-orange-300 font-mono flex items-center justify-between">
-                  <span>SPEAKER 1 VOICE (COACH SAL)</span>
-                  <span className="text-[10px] text-slate-400 font-normal">Chicago South-Side Baritone</span>
+              {/* Speaker 1 Voice & Persona Selector */}
+              <div className="space-y-3">
+                {/* Speaker 1 Archetype Selection */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-orange-300 font-mono flex items-center justify-between">
+                    <span>SPEAKER 1 CHARACTER PERSONA (LEAD HOST)</span>
+                    <span className="text-[10px] text-slate-400 font-normal">Select Lead Persona</span>
+                  </label>
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+                    {SPEAKER_PERSONAS.map(p => {
+                      const isSelected = selectedSpeaker1PersonaId === p.id;
+                      return (
+                        <button
+                          key={`drawer-spk1-${p.id}`}
+                          onClick={() => {
+                            setSelectedSpeaker1PersonaId(p.id);
+                            setSelectedVoice1(p.voiceName);
+                            localStorage.setItem('watercooler_speaker1_persona', p.id);
+                            localStorage.setItem('watercooler_voice1', p.voiceName);
+                          }}
+                          className={`p-2 rounded-lg border transition text-center cursor-pointer ${
+                            isSelected
+                              ? 'bg-orange-950/80 border-orange-500 text-white font-bold ring-1 ring-orange-500/60 shadow'
+                              : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          <div className="text-base">{p.avatar}</div>
+                          <div className="text-[11px] font-bold mt-0.5">{p.name}</div>
+                          <div className="text-[9px] text-slate-400 truncate font-mono">{p.archetype.split(' ')[0]}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <label className="text-xs font-bold text-orange-300 font-mono flex items-center justify-between pt-1">
+                  <span>SPEAKER 1 VOICE ({activeSpeaker1Persona.name.toUpperCase()})</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Gemini Voice Model</span>
                 </label>
                 <div className="grid grid-cols-1 gap-2">
                   {GEMINI_VOICES.map(v => (
                     <button
                       key={`spk1-${v.id}`}
-                      onClick={() => setSelectedVoice1(v.id)}
+                      onClick={() => {
+                        setSelectedVoice1(v.id);
+                        localStorage.setItem('watercooler_voice1', v.id);
+                      }}
                       className={`text-left p-2.5 rounded-lg border transition flex items-center justify-between text-xs cursor-pointer ${
                         selectedVoice1 === v.id
                           ? 'bg-orange-950/50 border-orange-500 text-white'
@@ -1092,14 +1343,14 @@ export const Watercooler: React.FC = () => {
 
               {/* Speaker 2 Voice & Persona Selector (Co-Host) */}
               <div className="space-y-3">
-                {/* Co-Host Archetype Selection inside Drawer */}
+                {/* Speaker 2 Archetype Selection inside Drawer */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-cyan-300 font-mono flex items-center justify-between">
-                    <span>CO-HOST CHARACTER PERSONA</span>
+                    <span>SPEAKER 2 CHARACTER PERSONA (CO-HOST)</span>
                     <span className="text-[10px] text-slate-400 font-normal">Select Debate Partner</span>
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {COHOST_OPTIONS.map(c => {
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+                    {SPEAKER_PERSONAS.map(c => {
                       const isSelected = selectedCohostId === c.id;
                       return (
                         <button
@@ -1107,16 +1358,18 @@ export const Watercooler: React.FC = () => {
                           onClick={() => {
                             setSelectedCohostId(c.id);
                             setSelectedVoice2(c.voiceName);
+                            localStorage.setItem('watercooler_cohost', c.id);
+                            localStorage.setItem('watercooler_voice2', c.voiceName);
                           }}
                           className={`p-2 rounded-lg border transition text-center cursor-pointer ${
                             isSelected
-                              ? 'bg-cyan-950/70 border-cyan-400 text-white font-bold ring-1 ring-cyan-500/60 shadow'
+                              ? 'bg-cyan-950/80 border-cyan-400 text-white font-bold ring-1 ring-cyan-500/60 shadow'
                               : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
                           }`}
                         >
                           <div className="text-base">{c.avatar}</div>
                           <div className="text-[11px] font-bold mt-0.5">{c.name}</div>
-                          <div className="text-[9px] text-slate-400 truncate font-mono">{c.archetype}</div>
+                          <div className="text-[9px] text-slate-400 truncate font-mono">{c.archetype.split(' ')[0]}</div>
                         </button>
                       );
                     })}
@@ -1131,7 +1384,10 @@ export const Watercooler: React.FC = () => {
                   {GEMINI_VOICES.map(v => (
                     <button
                       key={`spk2-${v.id}`}
-                      onClick={() => setSelectedVoice2(v.id)}
+                      onClick={() => {
+                        setSelectedVoice2(v.id);
+                        localStorage.setItem('watercooler_voice2', v.id);
+                      }}
                       className={`text-left p-2.5 rounded-lg border transition flex items-center justify-between text-xs cursor-pointer ${
                         selectedVoice2 === v.id
                           ? 'bg-cyan-950/50 border-cyan-500 text-white'
@@ -1164,7 +1420,10 @@ export const Watercooler: React.FC = () => {
                     {STYLE_PRESETS.map(s => (
                       <button
                         key={s.id}
-                        onClick={() => setSelectedStyleId(s.id)}
+                        onClick={() => {
+                          setSelectedStyleId(s.id);
+                          localStorage.setItem('watercooler_style', s.id);
+                        }}
                         className={`text-left p-2.5 rounded-lg border transition flex items-start gap-2.5 text-xs cursor-pointer ${
                           selectedStyleId === s.id
                             ? 'bg-purple-950/50 border-purple-500 text-white ring-1 ring-purple-500/50'
@@ -1182,13 +1441,42 @@ export const Watercooler: React.FC = () => {
                     ))}
                   </div>
 
-                  {/* Re-Synthesize & Regenerate Script Trigger */}
-                  <div className="pt-3 space-y-2">
+                  {/* Feedback Banner if saved */}
+                  {saveFeedback && (
+                    <div className="p-2 rounded-lg bg-emerald-950/80 border border-emerald-600/70 text-emerald-300 text-xs font-mono flex items-center gap-2 animate-in fade-in">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>{saveFeedback}</span>
+                    </div>
+                  )}
+
+                  {/* Action Controls & Confirmation */}
+                  <div className="pt-3 space-y-2.5">
                     <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 flex items-center justify-between text-[11px] font-mono">
                       <span className="text-slate-400">Target Config:</span>
                       <span className="text-slate-200 font-bold truncate">
-                        Coach Sal ({selectedVoice1}) vs {activeCohost.name} ({selectedVoice2}) • {activeStyle.label}
+                        {activeSpeaker1Persona.name} ({selectedVoice1}) vs {activeCohost.name} ({selectedVoice2}) • {activeStyle.label}
                       </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <button
+                        onClick={handleSaveVoiceConfig}
+                        className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-xs font-bold font-mono transition flex items-center justify-center gap-1.5 cursor-pointer shadow"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Save Voice & Cadence</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          handleSaveVoiceConfig();
+                          playTrackWithSpeechSynthesis(activeTrack);
+                        }}
+                        className="py-2.5 px-3 rounded-xl bg-purple-900/80 hover:bg-purple-800 border border-purple-700 text-white text-xs font-bold font-mono transition flex items-center justify-center gap-1.5 cursor-pointer shadow"
+                      >
+                        <Volume2 className="w-3.5 h-3.5 text-purple-300" />
+                        <span>Play With Selected Voices</span>
+                      </button>
                     </div>
 
                     <button
@@ -1200,7 +1488,7 @@ export const Watercooler: React.FC = () => {
                       <span>
                         {isSynthesizing || isGeneratingShow
                           ? 'Regenerating Script with Gemini & Synthesizing Audio...'
-                          : `Apply & Regenerate Script (${selectedVoice1} & ${activeCohost.name} • ${activeStyle.label})`}
+                          : `Apply & Regenerate Script (${activeSpeaker1Persona.name} & ${activeCohost.name} • ${activeStyle.label})`}
                       </span>
                     </button>
                     <p className="text-[10px] text-center text-slate-500 font-mono">
@@ -1324,7 +1612,7 @@ export const Watercooler: React.FC = () => {
               "{activeTrack.title}"
             </h4>
             <p className="text-xs text-slate-400 font-mono">
-              {activeTrack.subtitle} • {activeTrack.isMultiSpeaker ? `Hosts: Sal (${selectedVoice1}) & ${activeTrack.speaker2?.name || activeCohost.name} (${selectedVoice2})` : `Voice: ${selectedVoice1}`} • Gemini 3.1 Flash TTS
+              {activeTrack.subtitle} • {activeTrack.isMultiSpeaker ? `Hosts: ${activeTrack.speaker1?.name || activeSpeaker1Persona.name} (${selectedVoice1}) & ${activeTrack.speaker2?.name || activeCohost.name} (${selectedVoice2})` : `Voice: ${selectedVoice1}`} • Gemini 3.1 Flash TTS
             </p>
           </div>
 
@@ -1461,11 +1749,10 @@ export const Watercooler: React.FC = () => {
               <div className="space-y-1.5 bg-slate-950/60 p-3 rounded-lg border border-slate-800">
                 <div className="flex items-center gap-1.5 text-orange-400 font-bold font-mono">
                   <User className="w-3.5 h-3.5" />
-                  <span>Host 1: {activeTrack.speaker1?.title || 'Coach Sal Ditkofsky'}</span>
+                  <span>Host 1: {activeTrack.speaker1?.title || activeSpeaker1Persona.title}</span>
                 </div>
                 <p className="text-slate-300 text-[11px] leading-relaxed">
-                  {activeTrack.speaker1?.personalityPrompt ||
-                    'Speaks in a raspy, gravelly baritone with hearty scoffs, sudden table slaps, throat clears, and thick Ditka-style "da", "dis", "dat". Evaluates picks purely by gut feel and 1985 Bears grit.'}
+                  {activeTrack.speaker1?.personalityPrompt || activeSpeaker1Persona.description}
                 </p>
               </div>
 
@@ -1488,7 +1775,7 @@ export const Watercooler: React.FC = () => {
                 </div>
                 <p className="text-slate-300 text-[11px] leading-relaxed">
                   {activeTrack.directorsNotes ||
-                    'Fast-paced talk show banter with comedic tension between South-Side old-school football intuition and high-speed statistical roasting. Emphasize physical reactions like table slaps and tea sips.'}
+                    'Fast-paced talk show banter with comedic tension and distinct vocal personalities. Emphasize physical reactions like table slaps, dry analytical quips, and hot takes.'}
                 </p>
               </div>
             </div>
@@ -1517,7 +1804,7 @@ export const Watercooler: React.FC = () => {
     multiSpeakerVoiceConfig: {
       speakerVoiceConfigs: [
         {
-          speaker: activeTrack.speaker1?.name || 'Sal',
+          speaker: activeTrack.speaker1?.name || activeSpeaker1Persona.name,
           voiceConfig: {
             prebuiltVoiceConfig: {
               voiceName: selectedVoice1,
@@ -1565,7 +1852,8 @@ export const Watercooler: React.FC = () => {
             {activeTrack.dialogueTurns && activeTrack.dialogueTurns.length > 0 ? (
               <div className="space-y-3">
                 {activeTrack.dialogueTurns.map((turn, idx) => {
-                  const isSal = turn.speaker === 'Sal' || turn.speaker === 'Coach Sal';
+                  const spk1Name = activeTrack.speaker1?.name || activeSpeaker1Persona.name;
+                  const isSpeaker1 = turn.speaker === spk1Name || turn.speaker === 'Sal' || turn.speaker === 'Coach Sal';
                   const isCurrentTurn = isPlaying && activeTurnIndex === idx;
 
                   return (
@@ -1573,18 +1861,18 @@ export const Watercooler: React.FC = () => {
                       key={idx}
                       className={`p-3.5 rounded-xl border transition-all duration-200 ${
                         isCurrentTurn
-                          ? isSal
+                          ? isSpeaker1
                             ? 'bg-orange-950/40 border-orange-500 shadow-md shadow-orange-950/50 ring-1 ring-orange-500/40'
                             : 'bg-cyan-950/40 border-cyan-500 shadow-md shadow-cyan-950/50 ring-1 ring-cyan-500/40'
-                          : isSal
+                          : isSpeaker1
                           ? 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700'
                           : 'bg-slate-900/50 border-slate-800/80 hover:border-slate-700'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm">{isSal ? '🥩' : activeCohost.avatar}</span>
-                          <span className={`font-bold font-mono text-xs ${isSal ? 'text-orange-400' : 'text-cyan-400'}`}>
+                          <span className="text-sm">{isSpeaker1 ? activeSpeaker1Persona.avatar : activeCohost.avatar}</span>
+                          <span className={`font-bold font-mono text-xs ${isSpeaker1 ? 'text-orange-400' : 'text-cyan-400'}`}>
                             {turn.speaker}
                           </span>
                           {turn.stageDirection && (
@@ -1596,7 +1884,7 @@ export const Watercooler: React.FC = () => {
 
                         {isCurrentTurn && (
                           <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded flex items-center gap-1 ${
-                            isSal ? 'bg-orange-500/20 text-orange-300' : 'bg-cyan-500/20 text-cyan-300'
+                            isSpeaker1 ? 'bg-orange-500/20 text-orange-300' : 'bg-cyan-500/20 text-cyan-300'
                           }`}>
                             <span className="w-1.5 h-1.5 rounded-full bg-current animate-ping"></span>
                             <span>Speaking Turn</span>

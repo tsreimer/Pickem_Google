@@ -7,13 +7,15 @@ import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import { getPickerAdviceProfile, getPickerSpeakerAdvice } from "./src/data/pickerAdviceData";
 import { getTeamSeasonAccuracy, LEAGUE_SEASON_BENCHMARKS } from "./src/data/seasonAccuracyData";
+import { YAHOO_WEEK_1_PICKS_MATRIX, YAHOO_WEEK_2_PICKS_MATRIX, WEEK_1_TEAMS, WEEK_2_TEAMS } from "./src/data/mockData";
 
 dotenv.config();
 
 const app = express();
 const PORT = 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: "25mb" }));
+app.use(express.urlencoded({ limit: "25mb", extended: true }));
 
 // Initialize Gemini client lazily/safely
 let geminiClient: GoogleGenAI | null = null;
@@ -164,16 +166,30 @@ app.get("/api/yahoo/league", (req, res) => {
     leagueId: "initech-invitational",
     url: "https://football.fantasysports.yahoo.com/pickem",
     name: "The Initech Invitational",
-    currentWeek: 1,
+    currentWeek: currentActiveLeagueWeek,
     seasonYear: 2026,
     format: "Confidence Points (1-16)",
-    lockTime: "Thursday 8:15 PM & Sunday 1:00 PM EDT",
-    memberCount: 8,
-    status: "gated_private_group",
+    lockTime: "Thursday 8:15 PM & Sunday 10:00 AM PDT / 1:00 PM EDT",
+    memberCount: 12,
+    status: "active_in_progress",
     requiresAuth: true,
     errorNotice: "Yahoo Error #113: You are not a member of this group without Yahoo login / group password.",
     verified: true,
   });
+});
+
+// Endpoint: Get or set current active league week
+app.get("/api/league/week", (req, res) => {
+  res.json({ success: true, currentWeek: currentActiveLeagueWeek });
+});
+
+app.post("/api/league/week", (req, res) => {
+  const { week, weekNumber } = req.body || {};
+  const targetWeek = Number(week || weekNumber);
+  if (targetWeek && (targetWeek === 1 || targetWeek === 2)) {
+    currentActiveLeagueWeek = targetWeek;
+  }
+  res.json({ success: true, currentWeek: currentActiveLeagueWeek });
 });
 
 // Test league access with group password, invite link, or cookies
@@ -251,6 +267,340 @@ app.post("/api/yahoo/parse-picks", (req, res) => {
   });
 });
 
+// ============================================================================
+// Section 7.1: Screenshot-to-CSV OCR Ingestion Engine (Gemini 3.8 Flash Vision)
+// ============================================================================
+
+export const INITECH_WEEK_1_GAMES_SCHEDULE = [
+  { id: 1, favored: "Sea", spread: 3.5, underdog: "NE", matchup: "Sea vs NE", isLocked: true, winner: "Sea" },
+  { id: 2, favored: "LAR", spread: 3.5, underdog: "SF", matchup: "LAR vs SF", isLocked: true, winner: "SF" },
+  { id: 3, favored: "Cin", spread: 3.5, underdog: "TB", matchup: "Cin vs TB", isLocked: false },
+  { id: 4, favored: "Det", spread: 7.0, underdog: "NO", matchup: "Det vs NO", isLocked: false },
+  { id: 5, favored: "Ten", spread: 1.5, underdog: "NYJ", matchup: "Ten vs NYJ", isLocked: false },
+  { id: 6, favored: "Bal", spread: 3.5, underdog: "Ind", matchup: "Bal vs Ind", isLocked: false },
+  { id: 7, favored: "Pit", spread: 3.5, underdog: "Atl", matchup: "Pit vs Atl", isLocked: false },
+  { id: 8, favored: "Chi", spread: 2.5, underdog: "Car", matchup: "Chi vs Car", isLocked: false },
+  { id: 9, favored: "Jax", spread: 8.5, underdog: "Cle", matchup: "Jax vs Cle", isLocked: false },
+  { id: 10, favored: "Buf", spread: 1.5, underdog: "Hou", matchup: "Buf vs Hou", isLocked: false },
+  { id: 11, favored: "LV", spread: 3.5, underdog: "Mia", matchup: "LV vs Mia", isLocked: false },
+  { id: 12, favored: "Min", spread: 1.5, underdog: "GB", matchup: "Min vs GB", isLocked: false },
+  { id: 13, favored: "Phi", spread: 5.0, underdog: "Was", matchup: "Phi vs Was", isLocked: false },
+  { id: 14, favored: "LAC", spread: 10.0, underdog: "Ari", matchup: "LAC vs Ari", isLocked: false },
+  { id: 15, favored: "Dal", spread: 2.5, underdog: "NYG", matchup: "Dal vs NYG", isLocked: false },
+  { id: 16, favored: "KC", spread: 3.0, underdog: "Den", matchup: "KC vs Den", isLocked: false },
+];
+
+export const INITECH_WEEK_2_GAMES_SCHEDULE = [
+  { id: 1, favored: "Buf", spread: 4.5, underdog: "Det", matchup: "Buf vs Det", isLocked: true, winner: "Buf" },
+  { id: 2, favored: "Car", spread: 2.5, underdog: "Atl", matchup: "Car vs Atl", isLocked: true, winner: "Car" },
+  { id: 3, favored: "Chi", spread: 5.5, underdog: "Min", matchup: "Chi vs Min", isLocked: true, winner: "Min" },
+  { id: 4, favored: "Phi", spread: 7.0, underdog: "Ten", matchup: "Phi vs Ten", isLocked: true, winner: "Phi" },
+  { id: 5, favored: "NE", spread: 4.5, underdog: "Pit", matchup: "NE vs Pit", isLocked: true, winner: "NE" },
+  { id: 6, favored: "GB", spread: 3.5, underdog: "NYJ", matchup: "GB vs NYJ", isLocked: true, winner: "GB" },
+  { id: 7, favored: "TB", spread: 8.5, underdog: "Cle", matchup: "TB vs Cle", isLocked: true, winner: "Cle" },
+  { id: 8, favored: "Bal", spread: 8.5, underdog: "NO", matchup: "Bal vs NO", isLocked: true, winner: "NO" },
+  { id: 9, favored: "Hou", spread: 2.5, underdog: "Cin", matchup: "Hou vs Cin", isLocked: true, winner: "Cin" },
+  { id: 10, favored: "Den", spread: 2.5, underdog: "Jax", matchup: "Den vs Jax", isLocked: true, winner: "Den" },
+  { id: 11, favored: "LAC", spread: 6.5, underdog: "LV", matchup: "LAC vs LV", isLocked: true, winner: "LV" },
+  { id: 12, favored: "Dal", spread: 4.0, underdog: "Was", matchup: "Dal vs Was", isLocked: true, winner: "Dal" },
+  { id: 13, favored: "Sea", spread: 4.0, underdog: "Ari", matchup: "Sea vs Ari", isLocked: true, winner: "Sea" },
+  { id: 14, favored: "SF", spread: 13.5, underdog: "Mia", matchup: "SF vs Mia", isLocked: true, winner: "SF" },
+  { id: 15, favored: "KC", spread: 6.5, underdog: "Ind", matchup: "KC vs Ind", isLocked: true, winner: "KC" },
+  { id: 16, favored: "LAR", spread: 7.5, underdog: "NYG", matchup: "LAR vs NYG", isLocked: true, winner: "LAR" },
+];
+
+export function getScheduleForWeek(week: number) {
+  return Number(week) === 2 ? INITECH_WEEK_2_GAMES_SCHEDULE : INITECH_WEEK_1_GAMES_SCHEDULE;
+}
+
+let currentActiveLeagueWeek = 2;
+
+const CSV_HEADER_LINE = "Manager,TeamName,G1_Team,G1_Pts,G2_Team,G2_Pts,G3_Team,G3_Pts,G4_Team,G4_Pts,G5_Team,G5_Pts,G6_Team,G6_Pts,G7_Team,G7_Pts,G8_Team,G8_Pts,G9_Team,G9_Pts,G10_Team,G10_Pts,G11_Team,G11_Pts,G12_Team,G12_Pts,G13_Team,G13_Pts,G14_Team,G14_Pts,G15_Team,G15_Pts,G16_Team,G16_Pts,MNF_Total_Points";
+
+export function generateAiPromptText(weekNumber: number = 2): string {
+  const schedule = getScheduleForWeek(weekNumber);
+  const gamesListText = schedule.map(
+    (g) => `Game ${g.id}: ${g.matchup} (Favored: ${g.favored}, Underdog: ${g.underdog}${g.isLocked ? " • LOCKED" : " • UNLOCKED / PENDING"})`
+  ).join("\n");
+
+  return `You are an expert NFL Pick'em Ingestion Assistant for the "Initech Invitational" confidence pool for Week ${weekNumber}.
+I am attaching a screenshot of an NFL Pick'em card or league group picks table for Week ${weekNumber}.
+
+Please convert this screenshot into an RFC-compliant CSV with ZERO conversational preamble or markdown backticks so I can paste it directly into our pool ingestion engine.
+
+### Strict League Rules & Anti-Leak Privacy Directives:
+1. Each manager picks ONE team for each NFL game.
+2. CRITICAL ANTI-LEAK PRIVACY SHIELD:
+   If a game has not locked yet (e.g. Games 2 to 16 in Week 2), DO NOT extract or expose anyone's pick, even if the screenshot highlights tentative future picks in yellow for the logged-in user row! For any un-locked game or column showing "--", output "--" for team and leave the points cell empty.
+3. STRICT PROHIBITION ON HALLUCINATION:
+   DO NOT make up fake picks or confidence numbers to fill unplayed games or force a 136 total. If a game is not locked, keep it blank/empty.
+4. For locked/revealed games, extract the exact team picked and confidence weight (1-16).
+5. League Tie Rule: There are NO tiebreakers this season; winners split the prize evenly. (MNF_Total_Points is column 35; if not visible, use 45).
+6. Standard NFL team abbreviations only (e.g. Buf, Det, SF, KC, Sea, etc.).
+
+### Official Week ${weekNumber} NFL Game Schedule (Game 1 to 16):
+${gamesListText}
+
+### Required Output Format:
+Line 1 MUST be the exact CSV header:
+${CSV_HEADER_LINE}
+
+Subsequent lines must be the comma-separated data row(s) for each manager visible in the screenshot:
+"Manager Name","Team Name",Buf,16,--,,--,,--,,--,,--,,--,,--,,--,,--,,--,,--,,--,,--,,--,,45
+
+Output only the pure CSV text.`;
+}
+
+// Endpoint: Get copyable external AI prompt
+app.get("/api/picks/ai-prompt", (req, res) => {
+  const weekNumber = parseInt(req.query.week as string, 10) || currentActiveLeagueWeek;
+  const promptText = generateAiPromptText(weekNumber);
+  res.json({
+    success: true,
+    weekNumber,
+    headerLine: CSV_HEADER_LINE,
+    prompt: promptText,
+    gamesSchedule: getScheduleForWeek(weekNumber),
+  });
+});
+
+// Endpoint: Direct Screenshot-to-CSV OCR Ingestion via Gemini 3.8 Flash Vision
+app.post("/api/picks/ocr-screenshot", async (req, res) => {
+  const {
+    imageBase64,
+    mimeType = "image/png",
+    managerNameHint = "",
+    teamNameHint = "",
+    weekNumber = currentActiveLeagueWeek,
+  } = req.body || {};
+
+  if (!imageBase64 || typeof imageBase64 !== "string") {
+    return res.status(400).json({
+      success: false,
+      error: "Missing required 'imageBase64' image payload",
+    });
+  }
+
+  const activeWeek = Number(weekNumber) || currentActiveLeagueWeek;
+  const schedule = getScheduleForWeek(activeWeek);
+
+  // Sanitize base64 string
+  const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9+]+;base64,/, "").trim();
+  const cleanMime = mimeType || "image/png";
+
+  const ai = getGeminiClient();
+  if (!ai) {
+    console.info("[OCR Vision] Gemini API key not configured. Providing structured failover preview.");
+    
+    // Structured failover matching Week 2 Initech Invitational screenshot
+    const failoverManagers = activeWeek === 2 ? [
+      { managerName: "Steve", teamName: "Shoeman", picks: [{ gameId: 1, team: "Buf", confidence: 16 }] },
+      { managerName: "Amy", teamName: "Bird Boss", picks: [{ gameId: 1, team: "Buf", confidence: 12 }] },
+      { managerName: "Gail", teamName: "Orange crush", picks: [{ gameId: 1, team: "Buf", confidence: 11 }] },
+      { managerName: "Stacee", teamName: "Sacks and the City", picks: [{ gameId: 1, team: "Buf", confidence: 9 }] },
+      { managerName: "Mark", teamName: "Snap Judgments", picks: [{ gameId: 1, team: "Buf", confidence: 8 }] },
+      { managerName: "Dalton", teamName: "Bed Bath & Bijan", picks: [{ gameId: 1, team: "Buf", confidence: 7 }] },
+      { managerName: "Derek", teamName: "3-D", picks: [{ gameId: 1, team: "Buf", confidence: 7 }] },
+      { managerName: "Cory", teamName: "Niner Faithful", picks: [{ gameId: 1, team: "Buf", confidence: 5 }] },
+      { managerName: "Ramona", teamName: "Torts Illustrated", picks: [{ gameId: 1, team: "Buf", confidence: 5 }] },
+      { managerName: "Patrick", teamName: "BroncosCountry", picks: [{ gameId: 1, team: "Buf", confidence: 5 }] },
+      { managerName: "Brandon", teamName: "Sir Limps-A-Lot", picks: [{ gameId: 1, team: "Buf", confidence: 4 }] },
+      { managerName: "Todd", teamName: "CramItUp Your CramHole Lafleur", picks: [{ gameId: 1, team: "Det", confidence: 3 }] },
+    ] : [
+      { managerName: managerNameHint || "Todd", teamName: teamNameHint || "CramItUp Your CramHole Lafleur", picks: [{ gameId: 1, team: "Sea", confidence: 8 }, { gameId: 2, team: "SF", confidence: 10 }] }
+    ];
+
+    const formattedManagers = failoverManagers.map((m) => {
+      const g1 = m.picks.find(p => p.gameId === 1);
+      const csvCells = [`"${m.managerName}"`, `"${m.teamName}"`, g1?.team || '--', String(g1?.confidence || '')];
+      for (let g = 2; g <= 16; g++) {
+        csvCells.push('--', '');
+      }
+      csvCells.push('45');
+      return {
+        managerName: m.managerName,
+        teamName: m.teamName,
+        mnfTotalPoints: 45,
+        picks: m.picks,
+        sumPoints: m.picks.reduce((acc, p) => acc + (p.confidence || 0), 0),
+        lockedPicksCount: m.picks.length,
+        isPartialSlate: true,
+        isValidSum: true,
+        csvRow: csvCells.join(','),
+      };
+    });
+
+    return res.json({
+      success: true,
+      source: "offline_preview",
+      modelUsed: "offline_parser",
+      notes: `Offline preview for Week ${activeWeek}: TNF locked and G2-G16 protected under Anti-Leak Privacy Shield.`,
+      managers: formattedManagers,
+      fullCsv: `${CSV_HEADER_LINE}\n${formattedManagers.map(m => m.csvRow).join('\n')}`,
+    });
+  }
+
+  const promptText = `You are a high-accuracy OCR ingestion engine for the "Initech Invitational" NFL Confidence Pick'em league for Week ${activeWeek}.
+Analyze this screenshot carefully. It may be:
+A) A league group standings table / matrix showing all managers and their picks.
+B) A cropped portion showing only the completed or locked games (e.g., Thursday Night Football only).
+C) An individual manager's pick card.
+
+League Matchups for Week ${activeWeek}:
+${schedule.map((g) => `Game ${g.id}: ${g.matchup} (Favored: ${g.favored}, Underdog: ${g.underdog}${g.isLocked ? " • LOCKED" : " • NOT LOCKED / UPCOMING"})`).join("\n")}
+
+STRICT INGESTION & PRIVACY RULES:
+1. Identify ALL managers present in the screenshot (e.g. Shoeman, Bird Boss, Orange crush, Sacks and the City, Snap Judgments, Bed Bath & Bijan, 3-D, Niner Faithful, Torts Illustrated, BroncosCountry, Sir Limps-A-Lot, CramItUp Your CramHole Lafleur).
+2. CRITICAL ANTI-LEAK PRIVACY RULE FOR FUTURE UNLOCKED GAMES:
+   If a game has NOT kicked off / is NOT locked (or shows "--" for any manager):
+   DO NOT extract or reveal anyone's tentative future pick! Even if the screenshot highlights the logged-in user's row in yellow with their upcoming tentative picks, you MUST return team: "--" and confidence: null for all non-locked games!
+3. STRICT PROHIBITION ON HALLUCINATION / FAKE PICKS:
+   DO NOT invent, guess, hallucinate, or make up fake picks or confidence numbers to fill unplayed games. If only 1 game or partial games are locked, ONLY return the visible locked game(s). Return null or "--" for all un-locked games.
+4. PARTIAL SLATE ACCEPTANCE:
+   It is completely normal and valid for an in-progress week to only have 1 or a few locked games. Do NOT force the sum to 136 for partial slates.
+5. Standardize team abbreviations: Sea, NE, LAR, SF, Cin, TB, Det, NO, Ten, NYJ, Bal, Ind, Pit, Atl, Chi, Car, Jax, Cle, Buf, Hou, LV, Mia, Min, GB, Phi, Was, LAC, Ari, Dal, NYG, KC, Den.
+6. League Tie Rule: There are NO tiebreakers this season; winners split evenly. MNF column defaults to 45 if not specified.
+
+Respond ONLY with valid JSON matching this schema:
+{
+  "managers": [
+    {
+      "managerName": "string",
+      "teamName": "string",
+      "mnfTotalPoints": 45,
+      "picks": [
+        { "gameId": 1, "team": "Buf", "confidence": 16 }
+      ]
+    }
+  ],
+  "notes": "Short description of detected cards and lock status"
+}`;
+
+  try {
+    const candidateModels = ["gemini-3.8-flash", "gemini-flash-latest"];
+    let rawText = "";
+    let modelUsed = "gemini-3.8-flash";
+    let lastErr: any = null;
+
+    const imagePart = {
+      inlineData: {
+        mimeType: cleanMime,
+        data: cleanBase64,
+      },
+    };
+    const textPart = {
+      text: promptText,
+    };
+
+    for (const model of candidateModels) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: { parts: [imagePart, textPart] },
+          config: {
+            responseMimeType: "application/json",
+          },
+        });
+
+        if (response.text) {
+          rawText = response.text;
+          modelUsed = model;
+          break;
+        }
+      } catch (err: any) {
+        lastErr = err;
+        console.warn(`[OCR Vision] Model ${model} returned:`, err?.message || err);
+      }
+    }
+
+    if (!rawText) {
+      throw lastErr || new Error("Gemini Vision returned empty response for screenshot");
+    }
+
+    let parsed: any;
+    try {
+      parsed = JSON.parse(rawText);
+    } catch {
+      const cleaned = rawText.replace(/```json/gi, "").replace(/```/g, "").trim();
+      parsed = JSON.parse(cleaned);
+    }
+
+    // Server-Side Anti-Leak Shield & Integrity Normalizer
+    const sanitizedManagers = Array.isArray(parsed.managers) ? parsed.managers : [];
+    for (const mgr of sanitizedManagers) {
+      const rawPicks = Array.isArray(mgr.picks) ? mgr.picks : [];
+      const securePicks: any[] = [];
+
+      for (let gId = 1; gId <= 16; gId++) {
+        const schedGame = schedule.find(g => g.id === gId);
+        const existing = rawPicks.find((p: any) => Number(p.gameId) === gId);
+
+        if (!schedGame?.isLocked) {
+          // Game is not locked yet -> Strictly mask for anti-leak protection
+          securePicks.push({ gameId: gId, team: '--', confidence: null });
+        } else if (existing && existing.team && existing.team !== '--') {
+          const conf = Number(existing.confidence);
+          securePicks.push({
+            gameId: gId,
+            team: existing.team,
+            confidence: !isNaN(conf) && conf >= 1 && conf <= 16 ? conf : null,
+          });
+        } else {
+          securePicks.push({ gameId: gId, team: '--', confidence: null });
+        }
+      }
+      mgr.picks = securePicks;
+
+      const validWeights = securePicks
+        .map((p) => p.confidence)
+        .filter((c) => c !== null && typeof c === 'number');
+      const sum = validWeights.reduce((a, b) => a + b, 0);
+      mgr.sumPoints = sum;
+      mgr.lockedPicksCount = validWeights.length;
+
+      const hasDuplicates = new Set(validWeights).size !== validWeights.length;
+      mgr.hasDuplicates = hasDuplicates;
+      mgr.isPartialSlate = validWeights.length < 16;
+      mgr.isValidSum = !hasDuplicates && (validWeights.length === 16 ? sum === 136 : true);
+
+      // Build RFC-compliant CSV row with un-locked games properly masked as '--,'
+      const cells: string[] = [
+        `"${mgr.managerName || 'Manager'}"`,
+        `"${mgr.teamName || mgr.managerName || 'Team'}"`
+      ];
+      for (let gId = 1; gId <= 16; gId++) {
+        const p = securePicks.find(p => p.gameId === gId);
+        if (p && p.team && p.team !== '--' && p.confidence) {
+          cells.push(p.team, String(p.confidence));
+        } else {
+          cells.push('--', '');
+        }
+      }
+      cells.push(String(mgr.mnfTotalPoints || 45));
+      mgr.csvRow = cells.join(',');
+    }
+
+    const secureFullCsv = [CSV_HEADER_LINE, ...sanitizedManagers.map((m: any) => m.csvRow)].join('\n');
+
+    res.json({
+      success: true,
+      source: "gemini_vision",
+      modelUsed,
+      notes: parsed.notes || `Successfully extracted ${sanitizedManagers.length} pick card(s) from screenshot with Anti-Leak Privacy Shield active.`,
+      managers: sanitizedManagers,
+      fullCsv: secureFullCsv,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error("[OCR Vision] Error processing screenshot:", error?.message || error);
+    res.status(500).json({
+      success: false,
+      error: error?.message || "Failed to process screenshot with Gemini Vision",
+    });
+  }
+});
+
+
 // Section 7.5: Yahoo Game Lock Windows & Automated Sync Engine
 // Derives the 5 canonical NFL lock windows (Thursday Evening, Sunday Morning, Sunday Afternoon, Sunday Evening, Monday Evening)
 export interface LockWindowRecord {
@@ -293,102 +643,128 @@ const yahooLockWindows: LockWindowRecord[] = [
     typicalKickoff: "Thursday 8:15 PM EDT (TNF)",
     status: "synced",
     gamesCount: 1,
-    gamesList: ["DAL @ NYG (Final: DAL 20 - NYG 15)"],
+    gamesList: ["DET @ BUF (Final: BUF 41 - DET 31 • Locked & Ingested)"],
     lockedAt: "2026-09-17T20:15:00-04:00",
     syncedAt: "2026-09-17T20:15:09-04:00",
-    lastSyncResult: "All 12 Initech Invitational manager picks locked & ingested for TNF",
+    lastSyncResult: "Week 2 TNF locked & verified. 12 manager cards ingested: 11 selected BUF, 1 selected DET.",
     autoSyncTriggered: true,
   },
   {
     id: "sun_morning",
     name: "Sunday Morning Lock",
-    kickoffLabel: "Sun 1:00 PM",
+    kickoffLabel: "Sun 10:00 AM PDT / 1:00 PM EDT",
     day: "Sunday",
     period: "Morning",
-    typicalKickoff: "Sunday 1:00 PM EDT (Early Slate)",
+    typicalKickoff: "Sunday 1:00 PM EDT / 10:00 AM PDT (Early Slate)",
     status: "synced",
     gamesCount: 8,
-    gamesList: ["GB @ DET (Final: DET 31 - GB 29)", "CIN @ BAL (Final: BAL 41 - CIN 38)", "TEN @ NYJ", "IND @ CHI", "CLE @ JAX", "CAR @ TB", "MIA @ BUF", "NO @ ATL"],
-    lockedAt: "2026-09-20T13:00:00-04:00",
-    syncedAt: "2026-09-20T13:00:14-04:00",
-    lastSyncResult: "Early slate locked. 8 matchups revealed across 12 manager cards in matrix.",
+    gamesList: ["CAR @ ATL (CAR 34-3)", "CHI @ MIN (MIN 9-3)", "PHI @ TEN (PHI 24-20)", "NE @ PIT (NE 20-3)", "GB @ NYJ (GB 20-17 OT)", "TB @ CLE (CLE 23-19)", "BAL @ NO (NO 24-17)", "HOU @ CIN (CIN 20-6)"],
+    lockedAt: "2026-09-20T10:00:00-07:00",
+    syncedAt: "2026-09-20T10:00:14-07:00",
+    lastSyncResult: "Locked & synced: 8 early slate matchups. 96 picks across 12 manager cards revealed.",
     autoSyncTriggered: true,
   },
   {
     id: "sun_afternoon",
     name: "Sunday Afternoon Lock",
-    kickoffLabel: "Sun 4:05 PM / 4:25 PM",
+    kickoffLabel: "Sun 1:05 PM / 1:25 PM PDT",
     day: "Sunday",
     period: "Afternoon",
-    typicalKickoff: "Sunday 4:25 PM EDT (Late Slate)",
+    typicalKickoff: "Sunday 4:05 / 4:25 PM EDT (Late Slate)",
     status: "synced",
-    gamesCount: 4,
-    gamesList: ["BUF @ KC (Q4 01:18 • Sweat Game)", "DEN @ LAC (Final: LAC 23 - DEN 16)", "LAR @ ARI (Final: LAR 27 - ARI 24)", "WAS @ PHI (Scheduled)"],
-    lockedAt: "2026-09-20T16:25:00-04:00",
-    syncedAt: "2026-09-20T16:25:08-04:00",
-    lastSyncResult: "Late afternoon slate locked & synced. Active sweat game BUF @ KC streaming live.",
+    gamesCount: 5,
+    gamesList: ["DEN @ JAX (DEN 20-13)", "LV @ LAC (LV 26-14)", "WSH @ DAL (DAL 37-20)", "SEA @ ARI (SEA 31-7)", "MIA @ SF (SF 35-13)"],
+    lockedAt: "2026-09-20T13:25:00-07:00",
+    syncedAt: "2026-09-20T13:25:21-07:00",
+    lastSyncResult: "Locked & synced: 5 late slate matchups. 60 picks across 12 manager cards revealed.",
     autoSyncTriggered: true,
   },
   {
     id: "sun_evening",
     name: "Sunday Evening Lock",
-    kickoffLabel: "Sun 8:20 PM",
+    kickoffLabel: "Sun 5:20 PM PDT / 8:20 PM EDT",
     day: "Sunday",
     period: "Evening",
     typicalKickoff: "Sunday 8:20 PM EDT (SNF)",
-    status: "pending",
+    status: "synced",
     gamesCount: 1,
-    gamesList: ["LV @ MIA (Sun 8:20 PM)"],
-    lastSyncResult: "Pending kickoff lock at 8:20 PM EDT. Automated sync will trigger immediately upon lock.",
-    autoSyncTriggered: false,
+    gamesList: ["IND @ KC (KC 33-30 OT)"],
+    lockedAt: "2026-09-20T17:20:00-07:00",
+    syncedAt: "2026-09-20T17:20:08-07:00",
+    lastSyncResult: "Locked & synced: Sunday Night Football. 12 cards revealed.",
+    autoSyncTriggered: true,
   },
   {
     id: "mon_evening",
     name: "Monday Evening Lock",
-    kickoffLabel: "Mon 8:15 PM",
+    kickoffLabel: "Mon 5:15 PM PDT / 8:15 PM EDT",
     day: "Monday",
     period: "Evening",
     typicalKickoff: "Monday 8:15 PM EDT (MNF)",
-    status: "pending",
-    gamesCount: 2,
-    gamesList: ["SF @ SEA (Mon 8:15 PM)", "BAL @ LAC (Mon 8:15 PM)"],
-    lastSyncResult: "Pending Monday Night Football lock. Automated sync scheduled after kickoff lock.",
-    autoSyncTriggered: false,
+    status: "synced",
+    gamesCount: 1,
+    gamesList: ["NYG @ LAR (LAR 28-6)"],
+    lockedAt: "2026-09-21T17:15:00-07:00",
+    syncedAt: "2026-09-21T17:15:11-07:00",
+    lastSyncResult: "Locked & synced: Monday Night Football. Week 2 final settlement complete (16/16 games).",
+    autoSyncTriggered: true,
   },
 ];
 
 const syncAuditLogs: SyncAuditEntry[] = [
+  {
+    id: "audit-5",
+    timestamp: "2026-09-21T23:45:00-04:00",
+    windowId: "mon_evening",
+    windowName: "Monday Evening Lock",
+    status: "success",
+    message: "Week 2 Finalized: All 16 games settled. 12/12 manager cards verified against Yahoo Group ID# 13003. Champion: Amy (Bird Boss) wins 1st Place with 104 pts ($25.00 purse). Runner-Up: Steve (Shoeman) with 99 pts.",
+    gamesLockedCount: 1,
+    revealedPicksCount: 12,
+    triggerSource: "auto_daemon",
+  },
+  {
+    id: "audit-4",
+    timestamp: "2026-09-20T23:35:10-04:00",
+    windowId: "sun_evening",
+    windowName: "Sunday Evening Lock",
+    status: "success",
+    message: "SNF (KC 33 - IND 30 OT) settled. 12/12 manager cards updated.",
+    gamesLockedCount: 1,
+    revealedPicksCount: 12,
+    triggerSource: "auto_daemon",
+  },
+  {
+    id: "audit-3",
+    timestamp: "2026-09-20T19:40:00-04:00",
+    windowId: "sun_afternoon",
+    windowName: "Sunday Afternoon Lock",
+    status: "success",
+    message: "Late slate complete (5 games: DEN, LV, DAL, SEA, SF). 60 picks revealed.",
+    gamesLockedCount: 5,
+    revealedPicksCount: 60,
+    triggerSource: "auto_daemon",
+  },
+  {
+    id: "audit-2",
+    timestamp: "2026-09-20T16:25:00-04:00",
+    windowId: "sun_morning",
+    windowName: "Sunday Morning Lock",
+    status: "success",
+    message: "Early slate complete (8 games: CAR, MIN, PHI, NE, GB, CLE, NO, CIN). 96 picks revealed.",
+    gamesLockedCount: 8,
+    revealedPicksCount: 96,
+    triggerSource: "auto_daemon",
+  },
   {
     id: "audit-1",
     timestamp: "2026-09-17T20:15:09-04:00",
     windowId: "thu_evening",
     windowName: "Thursday Evening Lock",
     status: "success",
-    message: "Automated lock sync completed for Thursday Night Football (DAL @ NYG). 12/12 cards ingested.",
+    message: "Automated lock sync completed for Week 2 Thursday Night Football (BUF vs DET). 12/12 manager cards ingested (11 BUF, 1 DET).",
     gamesLockedCount: 1,
     revealedPicksCount: 12,
-    triggerSource: "auto_daemon",
-  },
-  {
-    id: "audit-2",
-    timestamp: "2026-09-20T13:00:14-04:00",
-    windowId: "sun_morning",
-    windowName: "Sunday Morning Lock",
-    status: "success",
-    message: "Automated lock sync completed for Sunday 1:00 PM early slate. 8 games locked, 96 picks revealed.",
-    gamesLockedCount: 8,
-    revealedPicksCount: 96,
-    triggerSource: "auto_daemon",
-  },
-  {
-    id: "audit-3",
-    timestamp: "2026-09-20T16:25:08-04:00",
-    windowId: "sun_afternoon",
-    windowName: "Sunday Afternoon Lock",
-    status: "success",
-    message: "Automated lock sync completed for Sunday late afternoon slate. Active sweat game BUF @ KC streaming live.",
-    gamesLockedCount: 4,
-    revealedPicksCount: 48,
     triggerSource: "auto_daemon",
   },
 ];
@@ -450,7 +826,7 @@ app.get("/api/yahoo/lock-windows", (req, res) => {
     leagueId: "initech-invitational",
     leagueName: "The Initech Invitational",
     autoSyncEnabled,
-    currentWeek: 1,
+    currentWeek: currentActiveLeagueWeek,
     windows: yahooLockWindows,
     totalGames: yahooLockWindows.reduce((acc, w) => acc + w.gamesCount, 0),
     syncedGamesCount: yahooLockWindows.filter((w) => w.status === "synced").reduce((acc, w) => acc + w.gamesCount, 0),
@@ -465,13 +841,34 @@ app.post("/api/yahoo/sync-lock-window", (req, res) => {
   const targetId = triggerAll ? undefined : windowId;
   const syncedResults = executeYahooLockSync(targetId, "manual_request");
 
+  const matrix = currentActiveLeagueWeek === 2 ? YAHOO_WEEK_2_PICKS_MATRIX : YAHOO_WEEK_1_PICKS_MATRIX;
+  const teams = currentActiveLeagueWeek === 2 ? WEEK_2_TEAMS : WEEK_1_TEAMS;
+
   res.json({
     success: true,
     message: targetId
       ? `Successfully synchronized Yahoo lock window: ${targetId}`
-      : "Synchronized all pending Yahoo game lock windows",
+      : "Synchronized all pending Yahoo game lock windows across all 12 league managers",
     syncedWindows: syncedResults,
     allWindows: yahooLockWindows,
+    matrix,
+    teams,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Endpoint: Get Yahoo picks matrix and teams standings for any week
+app.get("/api/yahoo/matrix", (req, res) => {
+  const weekParam = req.query.week ? Number(req.query.week) : currentActiveLeagueWeek;
+  const matrix = weekParam === 2 ? YAHOO_WEEK_2_PICKS_MATRIX : YAHOO_WEEK_1_PICKS_MATRIX;
+  const teams = weekParam === 2 ? WEEK_2_TEAMS : WEEK_1_TEAMS;
+  res.json({
+    success: true,
+    week: weekParam,
+    matrix,
+    teams,
+    totalGamesSettled: 16,
+    isComplete: true,
     timestamp: new Date().toISOString(),
   });
 });
@@ -704,7 +1101,7 @@ async function synthesizeSpeechWithGemini(
     fullPrompt = normalizeTtsBracketTags(fullPrompt);
   }
 
-  const cacheKey = `${isMulti ? `MULTI::${speakerConfigs.map(s => `${s.speaker}:${s.voiceName}`).join('|')}` : voiceName}:::${fullPrompt.trim()}`;
+  const cacheKey = `${isMulti ? `MULTI::${speakerConfigs.map(s => `${s.speaker}:${s.voiceName}`).join('|')}` : voiceName}::STYLE::${notes.trim()}:::${fullPrompt.trim()}`;
   if (ttsAudioCache.has(cacheKey)) {
     const cached = ttsAudioCache.get(cacheKey)!;
     return { ...cached, cached: true, fullPromptPayload: fullPrompt, isMultiSpeaker: isMulti };
@@ -1262,8 +1659,8 @@ app.get("/api/commissioner/overview", (req, res) => {
     success: true,
     leagueName: "The Initech Invitational",
     commissioner: "The Commish (High Table)",
-    currentWeek: 1,
-    totalTeams: 10,
+    currentWeek: currentActiveLeagueWeek,
+    totalTeams: 12,
     lockPolicy: "Strict Kickoff Lock (5-Window Staggered Enforcement)",
     yahooLockWindowsCount: yahooLockWindows.length,
     syncedWindowsCount: yahooLockWindows.filter(w => w.status === "synced").length,
@@ -1809,6 +2206,91 @@ app.post("/api/audio/weekly-recap/synthesize", async (req, res) => {
   }
 });
 
+interface BroadcastPersonaMeta {
+  id: string;
+  name: string;
+  title: string;
+  role: string;
+  voiceName: string;
+  color: string;
+  avatar: string;
+  tagline: string;
+  archetype: string;
+  promptBio: string;
+}
+
+function getBroadcastPersona(personaId: string, customVoice?: string): BroadcastPersonaMeta {
+  const normalized = (personaId || "").toLowerCase();
+  switch (normalized) {
+    case "chloe":
+      return {
+        id: "chloe",
+        name: "Chloe",
+        title: 'Dr. Chloe "The Algorithm" Vance',
+        role: "MIT Sloan Sports Analytics Director & NextGen Stats Lead",
+        voiceName: customVoice || "Kore",
+        color: "#06B6D4",
+        avatar: "📊",
+        tagline: "Expected Points Added > Your gut instinct and beef grease.",
+        archetype: "Ivy League Analytics Prodigy",
+        promptBio: "A 28-year-old MIT Sloan analytics director who sips matcha latte, cites Expected Points Added (EPA/play), win-probability charts, and dissects football through cold mathematical regression.",
+      };
+    case "kev":
+      return {
+        id: "kev",
+        name: "Kev",
+        title: 'Kev "The Score" Callahan',
+        role: "AM 670 Sports Radio Screamer & 8-Leg Parlay Degenerate",
+        voiceName: customVoice || "Puck",
+        color: "#F59E0B",
+        avatar: "⚡",
+        tagline: "I took out a second mortgage on Buffalo - fire the offensive coordinator!",
+        archetype: "AM Radio Hot-Take Jock",
+        promptBio: "A caffeinated, rapid-fire AM 670 sports radio screamer who had heavy confidence on the game, screams about blown picks, interrupts frantically, and demands every coach get fired immediately.",
+      };
+    case "rex":
+      return {
+        id: "rex",
+        name: "Rex",
+        title: 'Rex "Big Gunslinger" McCoy',
+        role: "Texas Quarterback Booster with Big Belt Buckle",
+        voiceName: customVoice || "Zephyr",
+        color: "#8B5CF6",
+        avatar: "🤠",
+        tagline: "If your quarterback can't throw a strawberry through a battleship, bench him!",
+        archetype: "Southern Arm-Talent Evangelist",
+        promptBio: "A big-talking Texas football booster with an enormous belt buckle who only cares about raw arm talent, deep 60-yard post routes, and big stadium tailgates, laughing boisterously at cold-weather trench football.",
+      };
+    case "marty":
+      return {
+        id: "marty",
+        name: "Marty",
+        title: 'Marty "The Book" Miller',
+        role: "Vegas Strip Syndicate Sharp & Line Maker",
+        voiceName: customVoice || "Charon",
+        color: "#10B981",
+        avatar: "🎲",
+        tagline: "The public buys tickets; the sharps cash the tickets.",
+        archetype: "Vegas Closing Line Sharp",
+        promptBio: "A grizzled Las Vegas syndicate oddsmaker who speaks in a low, gravelly rasp about closing line value (CLV), steam chasers, referee tendencies, and backdoor covers.",
+      };
+    case "sal":
+    default:
+      return {
+        id: "sal",
+        name: "Sal",
+        title: 'Coach Sal "Da Bear" Ditkofsky',
+        role: "Bridgeport Beef Stand Owner & 1985 Bears Disciple",
+        voiceName: customVoice || "Fenrir",
+        color: "#EA580C",
+        avatar: "🥩",
+        tagline: "Run da damn ball 40 times and punch 'em in da mouth!",
+        archetype: "Old-School Ditka Superfan",
+        promptBio: "A 61-year-old South-Side Chicago Italian beef proprietor and 1985 Bears diehard. Speaks with a thick Mike Ditka accent ('da', 'dis', 'dat', 'wit'), loves running the ball, slaps the table, scoffs at computers and fancy analytics.",
+      };
+  }
+}
+
 // Section 8.0: LLM Generative AI Postgame Show generator (Talk Show with Multi-Speaker TTS)
 app.post("/api/broadcast/generate", async (req, res) => {
   const {
@@ -1817,66 +2299,25 @@ app.post("/api/broadcast/generate", async (req, res) => {
     chaser = "Dave (Chalk King)",
     sweatGame = "BUF vs KC",
     margin = 3,
-    speaker1Voice = "Fenrir",
-    speaker2Voice = "Kore",
+    speaker1Voice,
+    speaker2Voice,
+    speaker1Persona = "sal",
+    speaker2Persona,
     cohostArchetype = "chloe",
     debateCadence = "Rapid-Fire Crosstalk & Gridiron Debate",
     cadencePrompt = "",
     stylePrompt = "",
   } = req.body;
 
-  // Speaker metadata definition
-  const speaker1Meta = {
-    id: "sal",
-    name: "Sal",
-    title: 'Coach Sal "Da Bear" Ditkofsky',
-    role: "Bridgeport Beef Stand Owner & 1985 Bears Disciple",
-    voiceName: speaker1Voice || "Fenrir",
-    color: "#EA580C",
-    avatar: "🥩",
-    tagline: "Run da damn ball 40 times and punch 'em in da mouth!",
-    archetype: "Old-School Ditka Superfan",
-    promptBio: "A 61-year-old South-Side Chicago Italian beef proprietor and 1985 Bears diehard. Speaks with a thick Mike Ditka accent ('da', 'dis', 'dat', 'wit''), loves running the ball, slaps the table, scoffs at computers and fancy analytics.",
-  };
+  // Speaker metadata definition based on selected personas
+  const speaker1Meta = getBroadcastPersona(speaker1Persona, speaker1Voice);
+  let speaker2Meta = getBroadcastPersona(speaker2Persona || cohostArchetype, speaker2Voice);
 
-  let speaker2Meta = {
-    id: "chloe",
-    name: "Chloe",
-    title: 'Dr. Chloe "The Algorithm" Vance',
-    role: "MIT Sloan Sports Analytics Director & NextGen Stats Lead",
-    voiceName: speaker2Voice || "Kore",
-    color: "#06B6D4",
-    avatar: "📊",
-    tagline: "Expected Points Added > Your gut instinct and beef grease.",
-    archetype: "Ivy League Analytics Prodigy",
-    promptBio: "A 28-year-old MIT Sloan analytics director who sips matcha latte, cites Expected Points Added (EPA/play), win-probability charts, and teases Sal's reliance on 'intangibles and sausage grease'.",
-  };
-
-  if (cohostArchetype === "kev") {
+  // If both personas happen to be the exact same, ensure speaker names are unique for dialogue turns
+  if (speaker1Meta.name === speaker2Meta.name) {
     speaker2Meta = {
-      id: "kev",
-      name: "Kev",
-      title: 'Kev "The Score" Callahan',
-      role: "AM 670 Sports Radio Screamer & 8-Leg Parlay Degenerate",
-      voiceName: speaker2Voice || "Puck",
-      color: "#F59E0B",
-      avatar: "⚡",
-      tagline: "I took out a second mortgage on Buffalo - fire the offensive coordinator!",
-      archetype: "AM Radio Hot-Take Jock",
-      promptBio: "A caffeinated, rapid-fire AM 670 sports radio screamer who had heavy confidence on the game, screams about blown picks, interrupts frantically, and demands every coach get fired immediately.",
-    };
-  } else if (cohostArchetype === "rex") {
-    speaker2Meta = {
-      id: "rex",
-      name: "Rex",
-      title: 'Rex "Big Gunslinger" McCoy',
-      role: "Texas Quarterback Booster with Big Belt Buckle",
-      voiceName: speaker2Voice || "Zephyr",
-      color: "#8B5CF6",
-      avatar: "🤠",
-      tagline: "If your quarterback can't throw a strawberry through a battleship, bench him!",
-      archetype: "Southern Arm-Talent Evangelist",
-      promptBio: "A big-talking Texas football booster with an enormous belt buckle who only cares about raw arm talent, deep 60-yard post routes, and big stadium tailgates, laughing boisterously at Sal's cold-weather trench football.",
+      ...speaker2Meta,
+      name: `${speaker2Meta.name} (Co-Host)`,
     };
   }
 
@@ -2027,8 +2468,9 @@ Recap context for Week ${weekNumber} (End-of-Day Gridiron Breakdown):
 INSTRUCTIONS:
 Generate a brand-new, authentic, hilarious, fast-paced 5-turn talk show conversation between ${speaker1Meta.name} and ${speaker2Meta.name}.
 Crucial requirements:
-- The script MUST distinctly reflect the persona of ${speaker2Meta.name} (${speaker2Meta.title}) and the specified Debate Cadence ("${activeCadence}").
-- Each line MUST start with "${speaker1Meta.name}: " or "${speaker2Meta.name}: ".
+- SNAPPY LENGTH: Keep each turn punchy (15-25 words per turn, total conversation around 90-110 words across all 5 turns) so that it plays fast like rapid-fire drive-time radio.
+- The script MUST distinctly reflect the persona of ${speaker2Meta.name} (${speaker2Meta.title}) and the specified Debate Cadence: "${activeCadence}".
+- IN "dialogue_turns", the "text" field MUST NOT include the speaker prefix (the "speaker" field indicates who is speaking). Example: "text": "[clears throat] Good morning Chicago! ..." (NOT "${speaker1Meta.name}: [clears throat] ...").
 - Alternate turns between ${speaker1Meta.name} and ${speaker2Meta.name} (5 turns total).
 - CRITICAL FLASH TTS BRACKET AUDIO TAG RULES:
   Gemini Flash TTS interprets bracketed tags directly for audio modulation.
@@ -2037,7 +2479,8 @@ Crucial requirements:
   1. Vocal tone & delivery for the sentence or phrase: [shouting with passion], [whispers], [gravelly baritone], [boisterous], [sarcastic], [deadpan], [excited], [disappointed], [fast paced], [slowly]
   2. Pauses & pacing: [pause], [dramatic pause], [short pause]
   3. Word emphasis: [emphasized]
-  4. Vocal sound effects: [sighs], [moans], [groans], [clears throat], [chuckles], [boisterous laugh], [coughs], [gasp], [fart noise]
+  4. Vocal sound effects: [sighs], [moans], [groans], [clears throat], [chuckles], [boisterous laugh], [coughs], [gasp]
+  Align tags directly with the Debate Cadence ("${activeCadence}")!
   Examples tailored to their archetypes:
   * For Sal: [clears throat], [booming coach shout], [chuckles in gravelly baritone], [groans in disgust], [pause], [sighs loudly]
   * For Chloe: [crisp analytical tone], [fast paced], [authoritative], [smirks], [deadpan]
@@ -2079,17 +2522,22 @@ Return ONLY valid JSON matching this schema:
       (Array.isArray(parsed.dialogue_turns) && parsed.dialogue_turns.length > 0
         ? parsed.dialogue_turns
         : fallbackDialogueTurns
-      ).map((t: any) => ({
-        ...t,
-        text: normalizeTtsBracketTags(t.text || ""),
-      }));
+      ).map((t: any) => {
+        const rawText = t.text || "";
+        const cleanSpeaker = t.speaker || speaker1Meta.name;
+        // Strip any accidental leading "Speaker:" prefix that LLM might output
+        const cleanedText = rawText.replace(new RegExp(`^${cleanSpeaker}:?\\s*`, "i"), "").trim();
+        return {
+          speaker: cleanSpeaker,
+          text: normalizeTtsBracketTags(cleanedText),
+          stageDirection: t.stageDirection || "",
+        };
+      });
 
-    // Build the exact Gemini TTS multi-speaker prompt string
+    // Build the exact Gemini TTS multi-speaker prompt string (clean official format)
     const conversationScript = `TTS the following conversation between ${speaker1Meta.name} and ${speaker2Meta.name}:\n${turns
       .map((t) => `${t.speaker}: ${t.text}`)
       .join("\n")}`;
-
-    const fullPromptPayload = `TTS the following conversation between ${speaker1Meta.name} and ${speaker2Meta.name}. ${parsed.directors_notes || DEFAULT_CHICAGO_DIRECTORS_NOTES}\n\n${conversationScript}`;
 
     parsed.show_title = parsed.show_title || "Halsted & Ivy: The Gridiron Dispute";
     parsed.is_multi_speaker = true;
@@ -2097,19 +2545,20 @@ Return ONLY valid JSON matching this schema:
     parsed.speaker_2 = speaker2Meta;
     parsed.dialogue_turns = turns;
     parsed.radio_script_text = conversationScript;
-    parsed.full_tts_prompt = fullPromptPayload;
+    parsed.full_tts_prompt = conversationScript;
+    parsed.directors_notes = parsed.directors_notes || `Director's Note: ${activeCadence}`;
 
     // Synthesize broadcast audio using Gemini Multi-Speaker TTS (gemini-3.1-flash-tts-preview)
     try {
       const ttsResult = await synthesizeSpeechWithGemini(
         conversationScript,
         speaker1Meta.voiceName,
-        parsed.directors_notes || DEFAULT_CHICAGO_DIRECTORS_NOTES,
+        activeCadence,
         {
           characterPersona: `${speaker1Meta.title} and ${speaker2Meta.title}`,
           sceneBackstory: parsed.scene_backstory,
-          directorsNotes: parsed.directors_notes,
-          fullPromptPayload: fullPromptPayload,
+          directorsNotes: activeCadence,
+          fullPromptPayload: conversationScript,
           isMultiSpeaker: true,
           speakerVoiceConfigs: [
             { speaker: speaker1Meta.name, voiceName: speaker1Meta.voiceName },
@@ -2636,7 +3085,7 @@ app.post("/api/coach/ask-advice", async (req, res) => {
       coach === "chloe"
         ? `You are Dr. Chloe "The Algorithm" Vance, 28-yr-old MIT Sloan sports analytics director. High-speed, articulate, data scientist. Focus on Expected Points Added (EPA), Bayesian win probability, closing line value (CLV), confidence point efficiency, and Game Theory Optimal (GTO) play.`
         : coach === "commish"
-        ? `You are The Commish AI, the stern, dry mathematical referee and commissioner of the Initech Invitational. Cite pool rules, standings implications, tiebreaker math, and point protection.`
+        ? `You are The Commish AI, the stern, dry mathematical referee and commissioner of the Initech Invitational. Cite pool rules, standings implications, point protection, and note that for our league this season there are NO tiebreakers—if there is a tie, the winners split the prize evenly.`
         : `You are Coach Sal "Da Bear" Ditkofsky, 61-yr-old Bridgeport Chicago hot-head, 1985 Bears superfan, South-Side beef stand owner. Ditka accent ("dis", "dat", "dem", "da Bears"), throat clears, sudden explosive disbelief, dramatic pauses, tough love, blunt accountability. Focus on line of scrimmage dominance, turnover differential, avoiding cute hedges, and protecting heavy 14-16 point anchor games.`;
 
     const prompt = `You are providing on-air tactical pick advice and strategic football analysis for a manager in "The Initech Invitational" confidence pool.

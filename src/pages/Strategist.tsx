@@ -30,8 +30,8 @@ import {
   MessageSquare,
 } from 'lucide-react';
 
-// Detailed 16-game portfolio for Todd Reimer and league managers
-const TODD_16_GAME_PORTFOLIO = [
+// Detailed 16-game portfolio for Todd Reimer and league managers (Week 1)
+const TODD_16_GAME_PORTFOLIO_WEEK_1 = [
   {
     gameNum: 1,
     matchup: 'SEA Seahawks @ NE Patriots',
@@ -258,8 +258,236 @@ const TODD_16_GAME_PORTFOLIO = [
   },
 ];
 
+// Detailed 16-game portfolio for Todd Reimer (Week 2 Final Settled - 69 pts)
+const TODD_16_GAME_PORTFOLIO_WEEK_2 = [
+  {
+    gameNum: 1,
+    matchup: 'BUF Bills @ DET Lions (TNF)',
+    teamPicked: 'Detroit Lions',
+    teamCode: 'DET',
+    confidencePts: 3,
+    status: 'settled_lost',
+    score: 'BUF 41 - DET 31 (Final)',
+    pointsEarned: 0,
+    vegasWinProb: 0.42,
+    publicPickPct: 0.38,
+    strategicRating: 'ABSORBED LOSS',
+    strategicInsight: 'Controlled damage: Dropped 3 confidence points on road dog in 41-31 shootout.',
+  },
+  {
+    gameNum: 2,
+    matchup: 'CAR Panthers @ ATL Falcons',
+    teamPicked: 'Atlanta Falcons',
+    teamCode: 'ATL',
+    confidencePts: 2,
+    status: 'settled_lost',
+    score: 'CAR 34 - ATL 3 (Final)',
+    pointsEarned: 0,
+    vegasWinProb: 0.46,
+    publicPickPct: 0.49,
+    strategicRating: 'ABSORBED LOSS',
+    strategicInsight: 'Panthers blowout 34-3; small 2-pt allocation safely absorbed.',
+  },
+  {
+    gameNum: 3,
+    matchup: 'MIN Vikings @ CHI Bears',
+    teamPicked: 'Chicago Bears',
+    teamCode: 'CHI',
+    confidencePts: 10,
+    status: 'settled_lost',
+    score: 'MIN 9 - CHI 3 (Final)',
+    pointsEarned: 0,
+    vegasWinProb: 0.69,
+    publicPickPct: 0.74,
+    strategicRating: 'DEFENSIVE UPSET',
+    strategicInsight: 'Defensive grind at Soldier Field: 9-3 Vikings upset dropped 10 points.',
+  },
+  {
+    gameNum: 4,
+    matchup: 'TEN Titans @ PHI Eagles',
+    teamPicked: 'Philadelphia Eagles',
+    teamCode: 'PHI',
+    confidencePts: 12,
+    status: 'settled_won',
+    score: 'PHI 24 - TEN 20 (Final)',
+    pointsEarned: 12,
+    vegasWinProb: 0.76,
+    publicPickPct: 0.82,
+    strategicRating: 'CORE ANCHOR CASHED',
+    strategicInsight: 'Major 12-point anchor delivers in tight 24-20 battle at Lincoln Financial Field.',
+  },
+  {
+    gameNum: 5,
+    matchup: 'PIT Steelers @ NE Patriots',
+    teamPicked: 'Pittsburgh Steelers',
+    teamCode: 'PIT',
+    confidencePts: 4,
+    status: 'settled_lost',
+    score: 'NE 20 - PIT 3 (Final)',
+    pointsEarned: 0,
+    vegasWinProb: 0.42,
+    publicPickPct: 0.48,
+    strategicRating: 'ABSORBED LOSS',
+    strategicInsight: 'Patriots defense dominates 20-3; dropped 4 points.',
+  },
+  {
+    gameNum: 6,
+    matchup: 'NYJ Jets @ GB Packers',
+    teamPicked: 'New York Jets',
+    teamCode: 'NYJ',
+    confidencePts: 1,
+    status: 'settled_lost',
+    score: 'GB 20 - NYJ 17 OT (Final)',
+    pointsEarned: 0,
+    vegasWinProb: 0.35,
+    publicPickPct: 0.32,
+    strategicRating: 'DAMAGE CONTROL',
+    strategicInsight: 'Green Bay walk-off in OT; minimal 1-pt hedge loss.',
+  },
+  {
+    gameNum: 7,
+    matchup: 'CLE Browns @ TB Buccaneers',
+    teamPicked: 'Tampa Bay Buccaneers',
+    teamCode: 'TB',
+    confidencePts: 15,
+    status: 'settled_lost',
+    score: 'CLE 23 - TB 19 (Final)',
+    pointsEarned: 0,
+    vegasWinProb: 0.74,
+    publicPickPct: 0.78,
+    strategicRating: 'HEAVY UPSET CASUALTY',
+    strategicInsight: 'Massive pool shocker: Browns stun Bucs 23-19, wiping out 15 points.',
+  },
+  {
+    gameNum: 8,
+    matchup: 'NO Saints @ BAL Ravens',
+    teamPicked: 'Baltimore Ravens',
+    teamCode: 'BAL',
+    confidencePts: 14,
+    status: 'settled_lost',
+    score: 'NO 24 - BAL 17 (Final)',
+    pointsEarned: 0,
+    vegasWinProb: 0.81,
+    publicPickPct: 0.87,
+    strategicRating: 'MASSIVE UPSET LOSS',
+    strategicInsight: 'Week 2 pool wrecker: Saints shock Lamar Jackson 24-17; 87% of all pools took Baltimore.',
+  },
+  {
+    gameNum: 9,
+    matchup: 'CIN Bengals @ HOU Texans',
+    teamPicked: 'Houston Texans',
+    teamCode: 'HOU',
+    confidencePts: 5,
+    status: 'settled_lost',
+    score: 'CIN 20 - HOU 6 (Final)',
+    pointsEarned: 0,
+    vegasWinProb: 0.45,
+    publicPickPct: 0.49,
+    strategicRating: 'ABSORBED LOSS',
+    strategicInsight: 'Bengals defense limits Texans to 6 points; 5-pt flyer dropped.',
+  },
+  {
+    gameNum: 10,
+    matchup: 'JAX Jaguars @ DEN Broncos',
+    teamPicked: 'Jacksonville Jaguars',
+    teamCode: 'JAX',
+    confidencePts: 7,
+    status: 'settled_lost',
+    score: 'DEN 20 - JAX 13 (Final)',
+    pointsEarned: 0,
+    vegasWinProb: 0.52,
+    publicPickPct: 0.65,
+    strategicRating: 'ROAD DOG HIT',
+    strategicInsight: 'Mile High altitude grind: Broncos edge Jags 20-13; dropped 7 points.',
+  },
+  {
+    gameNum: 11,
+    matchup: 'LV Raiders @ LAC Chargers',
+    teamPicked: 'Los Angeles Chargers',
+    teamCode: 'LAC',
+    confidencePts: 6,
+    status: 'settled_lost',
+    score: 'LV 26 - LAC 14 (Final)',
+    pointsEarned: 0,
+    vegasWinProb: 0.72,
+    publicPickPct: 0.79,
+    strategicRating: 'DIVISIONAL UPSET',
+    strategicInsight: 'Raiders ambush Chargers in SoFi 26-14; 6-pt loss absorbed.',
+  },
+  {
+    gameNum: 12,
+    matchup: 'WAS Commanders @ DAL Cowboys',
+    teamPicked: 'Dallas Cowboys',
+    teamCode: 'DAL',
+    confidencePts: 8,
+    status: 'settled_won',
+    score: 'DAL 37 - WAS 20 (Final)',
+    pointsEarned: 8,
+    vegasWinProb: 0.63,
+    publicPickPct: 0.67,
+    strategicRating: 'SOLID WIN',
+    strategicInsight: 'Offensive explosion at AT&T Stadium: Cashed 8 points in 37-20 rout.',
+  },
+  {
+    gameNum: 13,
+    matchup: 'ARI Cardinals @ SEA Seahawks',
+    teamPicked: 'Seattle Seahawks',
+    teamCode: 'SEA',
+    confidencePts: 9,
+    status: 'settled_won',
+    score: 'SEA 31 - ARI 7 (Final)',
+    pointsEarned: 9,
+    vegasWinProb: 0.64,
+    publicPickPct: 0.66,
+    strategicRating: 'SOLID WIN',
+    strategicInsight: 'Lumen Field blowout: Seahawks throttle Cardinals 31-7 to lock in 9 points.',
+  },
+  {
+    gameNum: 14,
+    matchup: 'MIA Dolphins @ SF 49ers',
+    teamPicked: 'San Francisco 49ers',
+    teamCode: 'SF',
+    confidencePts: 16,
+    status: 'settled_won',
+    score: 'SF 35 - MIA 13 (Final)',
+    pointsEarned: 16,
+    vegasWinProb: 0.88,
+    publicPickPct: 0.92,
+    strategicRating: 'MAX CHALK CASHED',
+    strategicInsight: 'Crown jewel anchor cashed: 49ers demolish Miami 35-13 to deliver maximum 16 points.',
+  },
+  {
+    gameNum: 15,
+    matchup: 'IND Colts @ KC Chiefs (SNF)',
+    teamPicked: 'Kansas City Chiefs',
+    teamCode: 'KC',
+    confidencePts: 11,
+    status: 'settled_won',
+    score: 'KC 33 - IND 30 OT (Final)',
+    pointsEarned: 11,
+    vegasWinProb: 0.71,
+    publicPickPct: 0.78,
+    strategicRating: 'SNF ANCHOR CASHED',
+    strategicInsight: 'Mahomes overtime thriller: 11 points banked on Sunday Night Football.',
+  },
+  {
+    gameNum: 16,
+    matchup: 'NYG Giants @ LAR Rams (MNF)',
+    teamPicked: 'Los Angeles Rams',
+    teamCode: 'LAR',
+    confidencePts: 13,
+    status: 'settled_won',
+    score: 'LAR 28 - NYG 6 (Final)',
+    pointsEarned: 13,
+    vegasWinProb: 0.74,
+    publicPickPct: 0.81,
+    strategicRating: 'MNF ANCHOR CASHED',
+    strategicInsight: 'Rams cruise 28-6 on Monday Night Football to close out Week 2 with 69 total points.',
+  },
+];
+
 export const Strategist: React.FC = () => {
-  const { currentTeam, teams, setCurrentTeamId, setActiveTab, comments, addComment } = useTeam();
+  const { currentTeam, teams, setCurrentTeamId, setActiveTab, comments, addComment, currentWeek, setCurrentWeek } = useTeam();
   const [selectedPickerId, setSelectedPickerId] = useState<string>(currentTeam?.id || 'team-todd');
   const [activePortalSection, setActivePortalSection] = useState<'ask_coach' | 'audio' | 'portfolio' | 'optimizer' | 'clinch'>('ask_coach');
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
@@ -431,19 +659,45 @@ export const Strategist: React.FC = () => {
                 <label className="text-[10px] font-mono uppercase text-slate-400 font-bold block">
                   Active Manager Identity:
                 </label>
-                <button
-                  type="button"
-                  onClick={() => setIsAdmin(prev => !prev)}
-                  className={`text-[10px] font-mono px-2 py-0.5 rounded transition cursor-pointer flex items-center gap-1 ${
-                    isAdmin
-                      ? 'bg-purple-900 text-purple-200 border border-purple-600 font-bold'
-                      : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
-                  }`}
-                  title="Toggle Commissioner / Admin Mode"
-                >
-                  <Lock className="w-2.5 h-2.5" />
-                  <span>Admin: {isAdmin ? 'ON' : 'OFF'}</span>
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex items-center bg-[#0B0F17] rounded p-0.5 border border-slate-750">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentWeek(1)}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition cursor-pointer ${
+                        currentWeek === 1
+                          ? 'bg-amber-500 text-slate-950 shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Wk 1
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentWeek(2)}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition cursor-pointer ${
+                        currentWeek === 2
+                          ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Wk 2 Active
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsAdmin(prev => !prev)}
+                    className={`text-[10px] font-mono px-2 py-0.5 rounded transition cursor-pointer flex items-center gap-1 ${
+                      isAdmin
+                        ? 'bg-purple-900 text-purple-200 border border-purple-600 font-bold'
+                        : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
+                    }`}
+                    title="Toggle Commissioner / Admin Mode"
+                  >
+                    <Lock className="w-2.5 h-2.5" />
+                    <span>Admin: {isAdmin ? 'ON' : 'OFF'}</span>
+                  </button>
+                </div>
               </div>
               <select
                 id="select-strategist-manager"
@@ -487,32 +741,52 @@ export const Strategist: React.FC = () => {
 
           <div className="p-3 rounded-xl bg-[#151D2A] border border-slate-800">
             <div className="text-[10px] font-mono text-slate-400 uppercase">Points Banked</div>
-            <div className="text-xl font-black text-emerald-400 mt-0.5">{activeTeam?.lockedPoints || 8} pts</div>
-            <div className="text-[10px] font-mono text-emerald-500">Seattle Win Cashed</div>
+            <div className="text-xl font-black text-emerald-400 mt-0.5">
+              {currentWeek === 2 ? 69 : (activeTeam?.lockedPoints || 8)} pts
+            </div>
+            <div className="text-[10px] font-mono text-emerald-500">
+              {currentWeek === 2 ? '6 Wins Settled' : 'Seattle Win Cashed'}
+            </div>
           </div>
 
           <div className="p-3 rounded-xl bg-[#151D2A] border border-slate-800">
             <div className="text-[10px] font-mono text-slate-400 uppercase">Loss Absorbed</div>
-            <div className="text-xl font-black text-amber-400 mt-0.5">-9 pts</div>
-            <div className="text-[10px] font-mono text-amber-500">SoFi Rams Choke</div>
+            <div className="text-xl font-black text-amber-400 mt-0.5">
+              {currentWeek === 2 ? '-67 pts' : '-9 pts'}
+            </div>
+            <div className="text-[10px] font-mono text-amber-500">
+              {currentWeek === 2 ? '10 Upsets Absorbed' : 'SoFi Rams Choke'}
+            </div>
           </div>
 
           <div className="p-3 rounded-xl bg-[#151D2A] border border-slate-800">
             <div className="text-[10px] font-mono text-slate-400 uppercase">Top Anchors Intact</div>
-            <div className="text-xl font-black text-emerald-400 mt-0.5">100% (7/7)</div>
-            <div className="text-[10px] font-mono text-slate-400">10, 11, 12, 13, 14, 15, 16 Live</div>
+            <div className="text-xl font-black text-emerald-400 mt-0.5">
+              {currentWeek === 2 ? 'SF [16] + LAR [13]' : '100% (7/7)'}
+            </div>
+            <div className="text-[10px] font-mono text-slate-400">
+              {currentWeek === 2 ? 'SF, LAR, PHI, KC Delivered' : '10, 11, 12, 13, 14, 15, 16 Live'}
+            </div>
           </div>
 
           <div className="p-3 rounded-xl bg-[#151D2A] border border-slate-800">
             <div className="text-[10px] font-mono text-slate-400 uppercase">Max Possible</div>
-            <div className="text-xl font-black text-white mt-0.5">{activeTeam?.maxPossible || 127} pts</div>
-            <div className="text-[10px] font-mono text-cyan-400">#1 Recovery Runway</div>
+            <div className="text-xl font-black text-white mt-0.5">
+              {currentWeek === 2 ? '69 pts' : (activeTeam?.maxPossible || 127) + ' pts'}
+            </div>
+            <div className="text-[10px] font-mono text-cyan-400">
+              {currentWeek === 2 ? 'Week 2 Official Final' : '#1 Recovery Runway'}
+            </div>
           </div>
 
           <div className="p-3 rounded-xl bg-[#151D2A] border border-slate-800">
             <div className="text-[10px] font-mono text-slate-400 uppercase">Portfolio Grade</div>
-            <div className="text-xl font-black text-emerald-400 mt-0.5">Grade A</div>
-            <div className="text-[10px] font-mono text-emerald-500">Masterful Structure</div>
+            <div className="text-xl font-black text-amber-400 mt-0.5">
+              {currentWeek === 2 ? 'Grade B-' : 'Grade A'}
+            </div>
+            <div className="text-[10px] font-mono text-emerald-500">
+              {currentWeek === 2 ? 'Cashed 16-pt Anchor' : 'Masterful Structure'}
+            </div>
           </div>
         </div>
 
@@ -676,14 +950,14 @@ export const Strategist: React.FC = () => {
         </div>
       )}
 
-      {/* SECTION 3: MY WEEK 1 PICK PORTFOLIO (WHAT I'VE PICKED ACROSS ALL 16 GAMES) */}
+      {/* SECTION 3: MY PICK PORTFOLIO (WHAT I'VE PICKED ACROSS ALL 16 GAMES) */}
       {(activePortalSection === 'portfolio' || activePortalSection === 'audio') && (
         <div className="bg-[#151D2A] border border-[#1E293B] rounded-2xl p-6 space-y-5 shadow-xl">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[#1E293B] pb-4">
             <div>
               <div className="flex items-center gap-2 text-xs font-mono text-emerald-400 font-bold uppercase">
                 <Layers className="w-4 h-4 text-emerald-400" />
-                <span>My Week 1 Pick Portfolio & Live Confidence Table</span>
+                <span>My Week {currentWeek} Pick Portfolio & Live Confidence Table</span>
               </div>
               <h3 className="font-bold text-white text-base mt-1">
                 Complete 16-Game Breakdown for {activeTeam?.ownerName}
@@ -696,46 +970,83 @@ export const Strategist: React.FC = () => {
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono text-slate-400">Status:</span>
               <span className="px-2.5 py-1 rounded-lg bg-emerald-950 border border-emerald-700 text-emerald-300 font-mono text-xs font-bold">
-                1 Win • 1 Loss • 14 Pending
+                {currentWeek === 2 ? '6 Wins • 10 Losses • 69 Pts Final' : '1 Win • 1 Loss • 14 Pending'}
               </span>
             </div>
           </div>
 
           {/* Portfolio Integrity Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="p-4 rounded-xl bg-[#0B0F17] border border-slate-800 space-y-1">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400 font-mono">⚡ Heavy Anchors (14–16 pts)</span>
-                <span className="text-emerald-400 font-bold font-mono">100% INTACT</span>
+          {currentWeek === 2 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-4 rounded-xl bg-[#0B0F17] border border-slate-800 space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400 font-mono">⚡ Heavy Anchors (14–16 pts)</span>
+                  <span className="text-amber-400 font-bold font-mono">1 of 3 CASHED (16 pts)</span>
+                </div>
+                <div className="text-lg font-black text-white">SF #16 CASHED</div>
+                <div className="text-[11px] text-slate-400">
+                  SF (16) crushed Miami 35-13; TB (15) and BAL (14) dropped in major upsets.
+                </div>
               </div>
-              <div className="text-lg font-black text-white">3 Games • 45 Points Live</div>
-              <div className="text-[11px] text-slate-400">
-                LAC (16), JAX (15), DET (14) • Avg Win Prob: 81.3%
-              </div>
-            </div>
 
-            <div className="p-4 rounded-xl bg-[#0B0F17] border border-slate-800 space-y-1">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400 font-mono">🎯 Core Anchors (10–13 pts)</span>
-                <span className="text-emerald-400 font-bold font-mono">100% INTACT</span>
+              <div className="p-4 rounded-xl bg-[#0B0F17] border border-slate-800 space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400 font-mono">🎯 Core Anchors (10–13 pts)</span>
+                  <span className="text-emerald-400 font-bold font-mono">3 of 4 CASHED (36 pts)</span>
+                </div>
+                <div className="text-lg font-black text-white">LAR #13, PHI #12, KC #11 WON</div>
+                <div className="text-[11px] text-slate-400">
+                  LAR (13), PHI (12), and KC (11) all held serve; CHI (10) dropped in 9-3 defensive battle.
+                </div>
               </div>
-              <div className="text-lg font-black text-white">4 Games • 46 Points Live</div>
-              <div className="text-[11px] text-slate-400">
-                PHI (13), BAL (12), PIT (11), CIN (10) • Avg Win Prob: 68.2%
-              </div>
-            </div>
 
-            <div className="p-4 rounded-xl bg-[#0B0F17] border border-slate-800 space-y-1">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400 font-mono">🛡️ Low Leverage Swings (1–7 pts)</span>
-                <span className="text-blue-400 font-bold font-mono">SAFE VARIANCE</span>
-              </div>
-              <div className="text-lg font-black text-white">7 Games • 28 Points Live</div>
-              <div className="text-[11px] text-slate-400">
-                LV (7), BUF (6), KC (5), DAL (4), CHI (3), TEN (2), MIN (1)
+              <div className="p-4 rounded-xl bg-[#0B0F17] border border-slate-800 space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400 font-mono">🛡️ Mid & Low Swings (1–9 pts)</span>
+                  <span className="text-emerald-400 font-bold font-mono">2 of 9 CASHED (17 pts)</span>
+                </div>
+                <div className="text-lg font-black text-white">2 Wins • 17 Points Banked</div>
+                <div className="text-[11px] text-slate-400">
+                  SEA (9) and DAL (8) cashed; JAX (7), LAC (6), HOU (5), PIT (4), DET (3), ATL (2), NYJ (1) absorbed.
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-4 rounded-xl bg-[#0B0F17] border border-slate-800 space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400 font-mono">⚡ Heavy Anchors (14–16 pts)</span>
+                  <span className="text-emerald-400 font-bold font-mono">100% INTACT</span>
+                </div>
+                <div className="text-lg font-black text-white">3 Games • 45 Points Live</div>
+                <div className="text-[11px] text-slate-400">
+                  LAC (16), JAX (15), DET (14) • Avg Win Prob: 81.3%
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#0B0F17] border border-slate-800 space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400 font-mono">🎯 Core Anchors (10–13 pts)</span>
+                  <span className="text-emerald-400 font-bold font-mono">100% INTACT</span>
+                </div>
+                <div className="text-lg font-black text-white">4 Games • 46 Points Live</div>
+                <div className="text-[11px] text-slate-400">
+                  PHI (13), BAL (12), PIT (11), CIN (10) • Avg Win Prob: 68.2%
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#0B0F17] border border-slate-800 space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400 font-mono">🛡️ Low Leverage Swings (1–7 pts)</span>
+                  <span className="text-blue-400 font-bold font-mono">SAFE VARIANCE</span>
+                </div>
+                <div className="text-lg font-black text-white">7 Games • 28 Points Live</div>
+                <div className="text-[11px] text-slate-400">
+                  LV (7), BUF (6), KC (5), DAL (4), CHI (3), TEN (2), MIN (1)
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 16-Game Picks Table */}
           <div className="overflow-x-auto">
@@ -754,7 +1065,7 @@ export const Strategist: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1E293B] font-mono text-xs">
-                {TODD_16_GAME_PORTFOLIO.map((item) => (
+                {(currentWeek === 2 ? TODD_16_GAME_PORTFOLIO_WEEK_2 : TODD_16_GAME_PORTFOLIO_WEEK_1).map((item) => (
                   <tr
                     key={item.gameNum}
                     className={`hover:bg-slate-900/40 transition ${
@@ -1125,8 +1436,20 @@ export const Strategist: React.FC = () => {
                         <span>• Chaser {chaserName} picked SF ({dynamicMnfPts} pts)</span>
                         <span className="text-white font-bold">&rarr; Final: {chaserBranchAPts} pts</span>
                       </div>
-                      <div className="text-red-400 font-sans font-semibold pt-2 border-t border-slate-800">
-                        Outcome: {leaderName} clinches 1st Place ({leaderBranchAPts} vs {chaserBranchAPts}). {chaserName} finishes 2nd ($0 weekly payout).
+                      <div className="font-sans font-semibold pt-2 border-t border-slate-800">
+                        {leaderBranchAPts === chaserBranchAPts ? (
+                          <span className="text-amber-400">
+                            Outcome: Dead Heat ({leaderBranchAPts} pts each). Per official league rules, there are NO tiebreakers &mdash; {leaderName} and {chaserName} split the 1st place prize evenly!
+                          </span>
+                        ) : leaderBranchAPts > chaserBranchAPts ? (
+                          <span className="text-red-400">
+                            Outcome: {leaderName} clinches 1st Place ({leaderBranchAPts} vs {chaserBranchAPts}). {chaserName} finishes 2nd ($0 weekly payout).
+                          </span>
+                        ) : (
+                          <span className="text-emerald-400">
+                            Outcome: {chaserName} clinches 1st Place ({chaserBranchAPts} vs {leaderBranchAPts}).
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1148,8 +1471,20 @@ export const Strategist: React.FC = () => {
                         <span>• Chaser {chaserName} hits SEA ({dynamicMnfPts} pts)</span>
                         <span className="text-white font-bold">&rarr; Final: {chaserBranchBPts} pts</span>
                       </div>
-                      <div className="text-emerald-400 font-sans font-bold pt-2 border-t border-slate-800">
-                        Outcome: {chaserName} steals 1st Place by +{marginOverLeaderInBranchB} pts (${leaderBranchBPts} &rarr; {chaserBranchBPts})!
+                      <div className="font-sans font-bold pt-2 border-t border-slate-800">
+                        {chaserBranchBPts === leaderBranchBPts ? (
+                          <span className="text-amber-400">
+                            Outcome: Dead Heat ({chaserBranchBPts} pts each). Per official league rules, there are NO tiebreakers &mdash; {chaserName} and {leaderName} split the 1st place prize evenly!
+                          </span>
+                        ) : chaserBranchBPts > leaderBranchBPts ? (
+                          <span className="text-emerald-400">
+                            Outcome: {chaserName} steals 1st Place by +{marginOverLeaderInBranchB} pts ({leaderBranchBPts} &rarr; {chaserBranchBPts})!
+                          </span>
+                        ) : (
+                          <span className="text-red-400">
+                            Outcome: {leaderName} holds 1st Place ({leaderBranchBPts} vs {chaserBranchBPts}).
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

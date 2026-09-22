@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Team, Game, CommentMessage, PushNotificationItem, YahooLockWindow, SyncAuditLogEntry } from '../types';
-import { INITIAL_TEAMS, INITIAL_GAMES, INITIAL_COMMENTS, INITIAL_NOTIFICATIONS } from '../data/mockData';
+import { Team, Game, CommentMessage, PushNotificationItem, YahooLockWindow, SyncAuditLogEntry, YahooGroupTeamRow } from '../types';
+import { INITIAL_TEAMS, WEEK_1_TEAMS, WEEK_2_TEAMS, INITIAL_GAMES, INITIAL_COMMENTS, INITIAL_NOTIFICATIONS, YAHOO_WEEK_1_PICKS_MATRIX, YAHOO_WEEK_2_PICKS_MATRIX, YAHOO_GROUP_PICKS_MATRIX } from '../data/mockData';
 import { audioPreGenerationService } from '../services/audioPreGenerationService';
 
 interface TeamContextType {
+  currentWeek: number;
+  setCurrentWeek: (week: number) => void;
   teams: Team[];
   setTeams: React.Dispatch<React.SetStateAction<Team[]>>;
   updateTeamRoster: (newTeams: Team[]) => void;
@@ -44,6 +46,10 @@ interface TeamContextType {
   // Simulation Controls
   simulateScenario: (scenario: 'kc_wins' | 'buf_scores_td' | 'reset') => void;
   simulationState: 'kc_leads' | 'buf_ahead' | 'final_kc' | 'final_buf';
+  // Pool Pick Matrix (Yahoo Sync & CSV Vault)
+  groupPicksMatrix: YahooGroupTeamRow[];
+  updateGroupPicksMatrix: (matrix: YahooGroupTeamRow[]) => void;
+  resetGroupPicksMatrix: () => void;
   activeTab: 'home' | 'war-room' | 'strategist' | 'watercooler' | 'vault' | 'commissioner';
   setActiveTab: (tab: 'home' | 'war-room' | 'strategist' | 'watercooler' | 'vault' | 'commissioner') => void;
 }
@@ -51,10 +57,74 @@ interface TeamContextType {
 const TeamContext = createContext<TeamContextType | undefined>(undefined);
 
 export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [teams, setTeams] = useState<Team[]>(INITIAL_TEAMS);
+  const [currentWeek, setCurrentWeekState] = useState<number>(2);
+  const [teams, setTeams] = useState<Team[]>(WEEK_2_TEAMS);
   const [games, setGames] = useState<Game[]>(INITIAL_GAMES);
   const [comments, setComments] = useState<CommentMessage[]>(INITIAL_COMMENTS);
   const [notifications, setNotifications] = useState<PushNotificationItem[]>(INITIAL_NOTIFICATIONS);
+  const [groupPicksMatrix, setGroupPicksMatrix] = useState<YahooGroupTeamRow[]>(YAHOO_WEEK_2_PICKS_MATRIX);
+
+  const setCurrentWeek = (week: number) => {
+    setCurrentWeekState(week);
+    if (week === 2) {
+      setTeams(WEEK_2_TEAMS);
+      setGroupPicksMatrix(YAHOO_WEEK_2_PICKS_MATRIX);
+    } else if (week === 1) {
+      setTeams(WEEK_1_TEAMS);
+      setGroupPicksMatrix(YAHOO_WEEK_1_PICKS_MATRIX);
+    }
+    fetch(`/api/yahoo/matrix?week=${week}`)
+      .then(res => res.json())
+      .then(mData => {
+        if (mData.success) {
+          if (Array.isArray(mData.matrix)) setGroupPicksMatrix(mData.matrix);
+          if (Array.isArray(mData.teams)) setTeams(mData.teams);
+        }
+      })
+      .catch(() => {});
+    fetch('/api/league/week', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ weekNumber: week }),
+    }).catch(err => console.warn('Failed to post week change:', err));
+  };
+
+  // Sync active week from backend on mount
+  useEffect(() => {
+    fetch('/api/league/week')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.currentWeek) {
+          setCurrentWeekState(data.currentWeek);
+          fetch(`/api/yahoo/matrix?week=${data.currentWeek}`)
+            .then(mRes => mRes.json())
+            .then(mData => {
+              if (mData.success) {
+                if (Array.isArray(mData.matrix)) setGroupPicksMatrix(mData.matrix);
+                if (Array.isArray(mData.teams)) setTeams(mData.teams);
+              } else {
+                if (data.currentWeek === 2) {
+                  setTeams(WEEK_2_TEAMS);
+                  setGroupPicksMatrix(YAHOO_WEEK_2_PICKS_MATRIX);
+                } else {
+                  setTeams(WEEK_1_TEAMS);
+                  setGroupPicksMatrix(YAHOO_WEEK_1_PICKS_MATRIX);
+                }
+              }
+            })
+            .catch(() => {
+              if (data.currentWeek === 2) {
+                setTeams(WEEK_2_TEAMS);
+                setGroupPicksMatrix(YAHOO_WEEK_2_PICKS_MATRIX);
+              } else {
+                setTeams(WEEK_1_TEAMS);
+                setGroupPicksMatrix(YAHOO_WEEK_1_PICKS_MATRIX);
+              }
+            });
+        }
+      })
+      .catch(e => console.warn('League week sync fallback:', e));
+  }, []);
   const [isIdentityModalOpen, setIsIdentityModalOpen] = useState(false);
   const [isSpecModalOpen, setIsSpecModalOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
@@ -76,6 +146,18 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.success && Array.isArray(data.games) && data.games.length > 0) {
         setGames(data.games);
         setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+
+        // Refresh matrix and scores
+        fetch(`/api/yahoo/matrix?week=${currentWeek}`)
+          .then(mRes => mRes.json())
+          .then(mData => {
+            if (mData.success) {
+              if (Array.isArray(mData.matrix)) setGroupPicksMatrix(mData.matrix);
+              if (Array.isArray(mData.teams)) setTeams(mData.teams);
+            }
+          })
+          .catch(() => {});
+
         return true;
       }
       return false;
@@ -194,6 +276,12 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data = await res.json();
       if (data.success && Array.isArray(data.allWindows)) {
         setYahooLockWindows(data.allWindows);
+        if (Array.isArray(data.matrix) && data.matrix.length > 0) {
+          setGroupPicksMatrix(data.matrix);
+        }
+        if (Array.isArray(data.teams) && data.teams.length > 0) {
+          setTeams(data.teams);
+        }
         await fetchYahooLockWindows();
         return true;
       }
@@ -427,12 +515,25 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateGroupPicksMatrix = (newMatrix: YahooGroupTeamRow[]) => {
+    if (Array.isArray(newMatrix) && newMatrix.length > 0) {
+      setGroupPicksMatrix(newMatrix);
+    }
+  };
+
+  const resetGroupPicksMatrix = () => {
+    setGroupPicksMatrix(YAHOO_GROUP_PICKS_MATRIX);
+  };
+
   return (
     <TeamContext.Provider
       value={{
         teams,
         setTeams,
         updateTeamRoster,
+        groupPicksMatrix,
+        updateGroupPicksMatrix,
+        resetGroupPicksMatrix,
         currentTeam,
         setCurrentTeamId,
         games,
@@ -470,6 +571,8 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
         simulationState,
         activeTab,
         setActiveTab,
+        currentWeek,
+        setCurrentWeek,
       }}
     >
       {children}

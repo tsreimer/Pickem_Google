@@ -23,9 +23,14 @@ import {
   Layers,
   Info,
   Mic,
-  MessageSquare
+  MessageSquare,
+  Database,
+  DollarSign
 } from 'lucide-react';
 import { TtsAudioProfile, formatTtsPromptPayload } from '../types';
+import { KickoffCountdown } from '../components/KickoffCountdown';
+import { CsvImportExportVault } from '../components/CsvImportExportVault';
+import { LeagueTreasuryCard } from '../components/LeagueTreasuryCard';
 
 export const Commissioner: React.FC = () => {
   const {
@@ -39,7 +44,7 @@ export const Commissioner: React.FC = () => {
     teams
   } = useTeam();
 
-  const [activeSubTab, setActiveSubTab] = useState<'tts-studio' | 'lock-windows' | 'pool-roster' | 'governance'>('tts-studio');
+  const [activeSubTab, setActiveSubTab] = useState<'tts-studio' | 'lock-windows' | 'pool-roster' | 'payout-schedule' | 'pool-csv-vault' | 'governance'>('tts-studio');
 
   // TTS Profile Studio State
   const [profile, setProfile] = useState<TtsAudioProfile>({
@@ -401,6 +406,36 @@ export const Commissioner: React.FC = () => {
         >
           <Users className="w-4 h-4" />
           <span>Manager Rosters &amp; Picks ({teams.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('pool-csv-vault')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs md:text-sm transition cursor-pointer whitespace-nowrap ${
+            activeSubTab === 'pool-csv-vault'
+              ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
+              : 'bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800'
+          }`}
+        >
+          <Database className="w-4 h-4 text-purple-400" />
+          <span>CSV &amp; Screenshot Vault</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 uppercase font-mono font-bold border border-purple-800">
+            SAFEGUARD &bull; OCR
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('payout-schedule')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs md:text-sm transition cursor-pointer whitespace-nowrap ${
+            activeSubTab === 'payout-schedule'
+              ? 'bg-amber-400 text-black shadow-lg shadow-amber-500/20'
+              : 'bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800'
+          }`}
+        >
+          <DollarSign className="w-4 h-4" />
+          <span>Treasury &amp; Payouts ($600)</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 font-mono font-bold">
+            VENMO @Todd-Reimer
+          </span>
         </button>
 
         <button
@@ -1086,17 +1121,12 @@ export const Commissioner: React.FC = () => {
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-white">{win.name}</span>
-                    <span
-                      className={`text-[10px] px-2 py-0.5 rounded uppercase font-mono font-bold ${
-                        win.status === 'synced'
-                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                          : win.status === 'locked'
-                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                          : 'bg-slate-800 text-slate-400'
-                      }`}
-                    >
-                      {win.status}
-                    </span>
+                    <KickoffCountdown
+                      status={win.status === 'synced' ? 'final' : win.status}
+                      compact={true}
+                      labelPrefix=""
+                      defaultMinutesRemaining={win.id === 'sun_evening' ? 180 : win.id === 'mon_evening' ? 1440 : 0}
+                    />
                   </div>
 
                   <div className="text-xs text-slate-300 font-mono">
@@ -1181,7 +1211,7 @@ export const Commissioner: React.FC = () => {
               <div>
                 <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                   <Users className="w-4 h-4 text-blue-400" />
-                  The Initech 10: Manager Roster &amp; Confidence Card Ledger
+                  The Initech 12: Manager Roster &amp; Confidence Card Ledger
                 </h2>
                 <p className="text-xs text-slate-400">
                   Inspect locked points, active sweat game allocations, and closing line expected values.
@@ -1232,7 +1262,51 @@ export const Commissioner: React.FC = () => {
                 </div>
               ))}
             </div>
+
+            {/* Shortcut to CSV Vault */}
+            <div className="p-4 rounded-xl bg-purple-950/30 border border-purple-800/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-purple-500/20 text-purple-400 shrink-0">
+                  <Database className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white flex items-center gap-2">
+                    <span>Offline Roster Backup &amp; CSV Failover Vault</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-mono">
+                      SAFEGUARD
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Need to manually ingest offline picks, export an immutable kickoff audit receipt, or download the template?
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setActiveSubTab('pool-csv-vault')}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white flex items-center gap-1.5 transition cursor-pointer shadow shrink-0"
+              >
+                <span>Open CSV Vault</span>
+                <span className="text-purple-200">&rarr;</span>
+              </button>
+            </div>
           </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SUB-TAB: POOL CSV BACKUP & INGESTION VAULT                                */}
+      {/* ========================================================================= */}
+      {activeSubTab === 'pool-csv-vault' && (
+        <CsvImportExportVault />
+      )}
+
+      {/* ========================================================================= */}
+      {/* SUB-TAB: LEAGUE TREASURY & PAYOUT STRUCTURE                               */}
+      {/* ========================================================================= */}
+      {activeSubTab === 'payout-schedule' && (
+        <div className="space-y-6">
+          <LeagueTreasuryCard />
         </div>
       )}
 
@@ -1273,15 +1347,20 @@ export const Commissioner: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
-                <h3 className="font-bold text-white uppercase text-xs text-amber-400">
-                  Article III: Tiebreaker Procedure
-                </h3>
-                <p className="leading-relaxed text-slate-400">
-                  In the event of a tie in weekly total points earned, tiebreakers are evaluated in the following order:
-                  <br />1. Monday Night Football combined total score delta (closest to actual without going over).
-                  <br />2. Points scored on top 3 anchor picks (16, 15, 14).
-                  <br />3. Pure pick accuracy percentage.
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-white uppercase text-xs text-amber-400">
+                    Article III: No Tiebreakers — Even Prize Split Rule
+                  </h3>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-amber-400/20 text-amber-300 font-mono font-bold">
+                    OFFICIAL RULE
+                  </span>
+                </div>
+                <p className="leading-relaxed text-slate-300">
+                  For this season, there are <strong className="text-white">NO tiebreakers</strong> under any circumstances. If two or more managers finish tied in weekly total points (or season-long pool standings), the winners <strong className="text-amber-400">split the prize evenly</strong>.
+                </p>
+                <p className="leading-relaxed text-slate-400 text-[11px] pt-1 border-t border-slate-900">
+                  Monday Night Football total score projections and secondary anchor picks are completely disregarded for prize allocations. If managers tie, the payout pot is divided equally.
                 </p>
               </div>
 
@@ -1293,6 +1372,25 @@ export const Commissioner: React.FC = () => {
                   The Commissioner reserves the sole prerogative to issue official league audio memorandums and broadcast rulings via the Gemini 3.1 Flash TTS Audio Profile Studio. All rulings posted to the Watercooler are final.
                 </p>
               </div>
+            </div>
+
+            {/* Article V: Payout Schedule */}
+            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2 md:col-span-2">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-white uppercase text-xs text-amber-400">
+                  Article V: 2026–2027 Official Prize Fund &amp; Payout Distribution
+                </h3>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono font-bold">
+                  TOTAL FUND: $600
+                </span>
+              </div>
+              <p className="leading-relaxed text-slate-300">
+                The league fund is comprised of 12 franchises with $50 entry dues (payable via Venmo <strong className="text-white">@Todd-Reimer</strong>).
+                Weekly payouts total <strong className="text-white">$450</strong> ($25/week &times; 18 regular season weeks).
+                The overall Playoff champion (most cumulative points across Playoff Weeks 1–4) receives <strong className="text-white">$25</strong>.
+                Season-long podium awards: 1st Place Champion receives <strong className="text-white">$50 + Official Trophy</strong>, 2nd Place receives <strong className="text-white">$15</strong>, and 3rd Place receives <strong className="text-white">$10</strong>.
+                The remaining $50 is allocated for the league trophy fund and High Table administration.
+              </p>
             </div>
           </div>
         </div>
