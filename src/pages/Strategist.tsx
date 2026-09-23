@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useTeam } from '../context/TeamContext';
+import { useAudioProfile } from '../context/AudioProfileContext';
 import { INITIAL_DIVERGENCE_DATA, INITIAL_TEAMS } from '../data/mockData';
 import { IndividualPickerAudioAdvice } from '../components/IndividualPickerAudioAdvice';
 import { AskCoachAdvice } from '../components/AskCoachAdvice';
@@ -488,6 +489,7 @@ const TODD_16_GAME_PORTFOLIO_WEEK_2 = [
 
 export const Strategist: React.FC = () => {
   const { currentTeam, teams, setCurrentTeamId, setActiveTab, comments, addComment, currentWeek, setCurrentWeek } = useTeam();
+  const { profile: audioProfile, primaryHost } = useAudioProfile();
   const [selectedPickerId, setSelectedPickerId] = useState<string>(currentTeam?.id || 'team-todd');
   const [activePortalSection, setActivePortalSection] = useState<'ask_coach' | 'audio' | 'portfolio' | 'optimizer' | 'clinch'>('ask_coach');
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
@@ -648,7 +650,7 @@ export const Strategist: React.FC = () => {
             </div>
 
             <p className="text-xs text-slate-300 max-w-3xl leading-relaxed">
-              Welcome to your private Initech Invitational War Room. This portal is strictly confidential to you: analyze your personal 16-game confidence portfolio, listen to Coach Sal's pre-buffered voice strategy briefing, explore dynamic game-by-game recommendations, and map your Monday Night clinch scenarios.
+              Welcome to your private Initech Invitational War Room. This portal is strictly confidential to you: analyze your personal 16-game confidence portfolio, listen to {primaryHost.speaker}'s pre-buffered voice strategy briefing, explore dynamic game-by-game recommendations, and map your Monday Night clinch scenarios.
             </p>
           </div>
 
@@ -718,7 +720,7 @@ export const Strategist: React.FC = () => {
               className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/60 text-xs text-amber-300 font-bold transition cursor-pointer"
             >
               <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
-              <span>Ask Coach Sal</span>
+              <span>Ask {primaryHost.speaker}</span>
             </button>
 
             <button
@@ -802,7 +804,7 @@ export const Strategist: React.FC = () => {
             }`}
           >
             <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
-            <span>💬 Ask Coach Sal (Pick Advice)</span>
+            <span>💬 Ask {primaryHost.speaker} (Pick Advice)</span>
           </button>
 
           <button
@@ -878,7 +880,7 @@ export const Strategist: React.FC = () => {
                 Confidential Voice Strategy Briefing
               </h3>
               <span className="text-xs px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 font-mono">
-                Coach Sal Ditkofsky (Pre-buffered • Zero Wait)
+                {primaryHost.speaker} (Pre-buffered • Gemini 3.8 Flash TTS)
               </span>
             </div>
             <span className="text-xs text-slate-400 font-mono hidden sm:inline">

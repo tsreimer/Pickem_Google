@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTeam } from '../context/TeamContext';
+import { useAudioProfile } from '../context/AudioProfileContext';
 import { speechEngine } from '../utils/speechEngine';
 import {
   Mic,
@@ -94,6 +95,7 @@ export const AskCoachAdvice: React.FC<AskCoachAdviceProps> = ({
   selectedTeamId,
 }) => {
   const { currentTeam, teams, addComment } = useTeam();
+  const { profile: activeProfile, primaryHost, coHost } = useAudioProfile();
 
   const activeTeam = teams.find((t) => t.id === (selectedTeamId || currentTeam?.id)) || currentTeam || teams[0];
 
@@ -245,12 +247,17 @@ export const AskCoachAdvice: React.FC<AskCoachAdviceProps> = ({
     setIsSynthesizingAudio(true);
     setTtsNotice(null);
 
-    const voiceName = selectedCoach === 'sal' ? 'Fenrir' : selectedCoach === 'chloe' ? 'Kore' : 'Puck';
+    const voiceName =
+      selectedCoach === 'sal'
+        ? (primaryHost.voiceName || 'Fenrir')
+        : selectedCoach === 'chloe'
+        ? (coHost.voiceName || 'Kore')
+        : 'Puck';
     const stylePrompt =
       selectedCoach === 'sal'
-        ? 'Coach Sal Ditkofsky, passionate 1985 Bears disciple and South-Side Chicago beef stand operator. Deep, intense, gravelly, authentic Ditka swagger, direct and punchy.'
+        ? `${primaryHost.speaker}, ${primaryHost.roleContext || primaryHost.title}. ${activeProfile?.directorsNotes?.style || ''}`
         : selectedCoach === 'chloe'
-        ? 'Dr. Chloe Vance, MIT Sloan Sports Analytics director, high-speed articulate data scientist. Sharp, crisp, analytical swagger.'
+        ? `${coHost.speaker}, ${coHost.roleContext || coHost.title}. ${activeProfile?.directorsNotes?.style || ''}`
         : 'The Commish AI, official pool commissioner, authoritative, robotic chime, precise statistical ruling.';
 
     try {
@@ -414,8 +421,8 @@ export const AskCoachAdvice: React.FC<AskCoachAdviceProps> = ({
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <span>🥩 Coach Sal</span>
-            <span className="text-[10px] hidden sm:inline opacity-80">(Chicago Grit)</span>
+            <span>{primaryHost.avatar || '🥩'} {primaryHost.speaker || 'Coach Sal'}</span>
+            <span className="text-[10px] hidden sm:inline opacity-80">({primaryHost.voiceName || 'Fenrir'})</span>
           </button>
 
           <button
@@ -432,8 +439,8 @@ export const AskCoachAdvice: React.FC<AskCoachAdviceProps> = ({
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <span>📊 Dr. Chloe</span>
-            <span className="text-[10px] hidden sm:inline opacity-80">(MIT Analytics)</span>
+            <span>{coHost.avatar || '📊'} {coHost.speaker || 'Dr. Chloe'}</span>
+            <span className="text-[10px] hidden sm:inline opacity-80">({coHost.voiceName || 'Kore'})</span>
           </button>
 
           <button
@@ -503,7 +510,7 @@ export const AskCoachAdvice: React.FC<AskCoachAdviceProps> = ({
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleAskCoach();
             }}
-            placeholder={`Ask ${selectedCoach === 'sal' ? 'Coach Sal' : selectedCoach === 'chloe' ? 'Dr. Chloe' : 'The Commish'} for advice on picks, anchors, matchups, or leverage...`}
+            placeholder={`Ask ${selectedCoach === 'sal' ? primaryHost.speaker : selectedCoach === 'chloe' ? coHost.speaker : 'The Commish'} for advice on picks, anchors, matchups, or leverage...`}
             className="flex-1 bg-slate-900 border border-slate-700 text-white text-xs sm:text-sm rounded-lg px-3.5 py-2.5 focus:outline-none focus:border-amber-500 placeholder-slate-500"
           />
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTeam } from '../context/TeamContext';
+import { useAudioProfile } from '../context/AudioProfileContext';
 import { AUDIO_TRACKS } from '../data/mockData';
 import { SeasonPickAccuracyTrends } from '../components/SeasonPickAccuracyTrends';
 import { LeagueTreasuryCard } from '../components/LeagueTreasuryCard';
@@ -30,6 +31,7 @@ import {
 
 export const Home: React.FC = () => {
   const { currentTeam, setCurrentTeamId, setActiveTab, teams, currentWeek, setCurrentWeek } = useTeam();
+  const { profile: audioProfile, primaryHost, coHost } = useAudioProfile();
 
   // Audio Playback State
   const [isPlaying, setIsPlaying] = useState(false);
@@ -99,7 +101,7 @@ export const Home: React.FC = () => {
         clearInterval(timerRef.current);
       }
     };
-  }, [currentWeek]);
+  }, [currentWeek, audioProfile]);
 
   // Update timer during playback
   useEffect(() => {
@@ -383,14 +385,16 @@ export const Home: React.FC = () => {
                 </span>
               </div>
               <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                {currentWeek === 3
-                  ? 'Halsted & Ivy: Week 3 Preview & Strategy — Coach Sal & Dr. Chloe'
+                {audioProfile?.name
+                  ? `${audioProfile.name} • Week ${currentWeek || 3} Debrief`
+                  : currentWeek === 3
+                  ? 'Halsted & Ivy: Week 3 Preview & Strategy'
                   : currentWeek === 2
-                  ? 'Halsted & Ivy: Week 2 Official Wrap — Bird Boss Triumphs with 104 Pts'
-                  : 'Halsted & Ivy: Week 1 Recap & SoFi Bloodbath'}
+                  ? 'Halsted & Ivy: Week 2 Official Wrap'
+                  : 'Halsted & Ivy: Week 1 Recap'}
               </h2>
               <p className="text-xs sm:text-sm text-slate-400">
-                Featuring <strong className="text-orange-400">Coach Sal Ditkofsky</strong> (Bridgeport Chicago) & <strong className="text-cyan-400">Dr. Chloe Vance</strong> (MIT Sloan Sports Analytics)
+                Featuring <strong className="text-orange-400">{primaryHost.speaker}</strong> ({primaryHost.title}) & <strong className="text-cyan-400">{coHost.speaker}</strong> ({coHost.title})
               </p>
             </div>
 
@@ -411,7 +415,7 @@ export const Home: React.FC = () => {
                 title="Full Dual-Host Broadcast"
               >
                 <span>🎙️</span>
-                <span>Sal & Chloe</span>
+                <span>{primaryHost.speaker.split(' ')[0]} & {coHost.speaker.split(' ')[0]}</span>
               </button>
               <button
                 onClick={() => {
@@ -425,10 +429,10 @@ export const Home: React.FC = () => {
                     ? 'bg-orange-600 text-white shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
-                title="Coach Sal Hot Take"
+                title={`${primaryHost.speaker} Hot Take`}
               >
-                <span>🥩</span>
-                <span className="hidden sm:inline">Coach</span> Sal
+                <span>{primaryHost.avatar || '🥩'}</span>
+                <span>{primaryHost.speaker}</span>
               </button>
               <button
                 onClick={() => {
@@ -442,10 +446,10 @@ export const Home: React.FC = () => {
                     ? 'bg-cyan-600 text-white shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
-                title="Dr. Chloe MIT Analytics"
+                title={`${coHost.speaker} Analysis`}
               >
-                <span>📊</span>
-                <span className="hidden sm:inline">Dr.</span> Chloe
+                <span>{coHost.avatar || '📊'}</span>
+                <span>{coHost.speaker}</span>
               </button>
             </div>
           </div>
@@ -715,7 +719,7 @@ export const Home: React.FC = () => {
                     <div key={i} className="space-y-1">
                       <div className="flex items-center gap-2">
                         <strong className={turn.speaker === 'Sal' ? 'text-orange-400 font-bold' : 'text-cyan-400 font-bold'}>
-                          {turn.speaker === 'Sal' ? 'Coach Sal Ditkofsky' : 'Dr. Chloe Vance'}
+                          {turn.speaker === 'Sal' ? primaryHost.speaker : turn.speaker === 'Chloe' ? coHost.speaker : turn.speaker}
                         </strong>
                         <span className="text-[10px] text-slate-500 italic">[{turn.stageDirection}]</span>
                       </div>

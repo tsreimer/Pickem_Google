@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { useTeam } from '../context/TeamContext';
-import { YAHOO_WEEK_GAMES, YAHOO_GROUP_PICKS_MATRIX } from '../data/mockData';
+import {
+  YAHOO_WEEK_GAMES,
+  YAHOO_GROUP_PICKS_MATRIX,
+  YAHOO_WEEK_1_GAMES,
+  YAHOO_WEEK_2_GAMES,
+  YAHOO_WEEK_3_GAMES,
+  YAHOO_WEEK_1_PICKS_MATRIX,
+  YAHOO_WEEK_2_PICKS_MATRIX,
+  YAHOO_WEEK_3_PICKS_MATRIX,
+} from '../data/mockData';
 import {
   Trophy,
   AlertTriangle,
@@ -36,11 +45,17 @@ export const EndOfDayRecap: React.FC<EndOfDayRecapProps> = ({
   const [filterCategory, setFilterCategory] = useState<'all' | 'user' | 'leaders' | 'high_ceiling'>('all');
   const [selectedPickerId, setSelectedPickerId] = useState<string | null>(null);
 
-  // Completed games data
-  const completedGames = currentWeek === 2
-    ? YAHOO_WEEK_GAMES
-    : YAHOO_WEEK_GAMES.filter(g => g.status === 'final');
-  const pendingGames = currentWeek === 2 ? [] : YAHOO_WEEK_GAMES.filter(g => g.status !== 'final');
+  // Completed & pending games data based on selected week
+  const completedGames = currentWeek === 3
+    ? []
+    : currentWeek === 2
+    ? YAHOO_WEEK_2_GAMES
+    : YAHOO_WEEK_1_GAMES.filter(g => g.status === 'final');
+  const pendingGames = currentWeek === 3
+    ? YAHOO_WEEK_3_GAMES
+    : currentWeek === 2
+    ? []
+    : YAHOO_WEEK_1_GAMES.filter(g => g.status !== 'final');
 
   // Detailed picker scorecard analytics derived from the Initech Invitational
   const week1Pickers = [
@@ -235,7 +250,147 @@ export const EndOfDayRecap: React.FC<EndOfDayRecapProps> = ({
     },
   ];
 
-  const pickersAnalysis = currentWeek === 2 ? week2Pickers : week1Pickers;
+  const week3Pickers = [
+    {
+      teamId: 'team-birdboss',
+      teamName: 'Bird Boss',
+      ownerName: 'Amy',
+      rank: 1,
+      points: 196,
+      avatar: 'BB',
+      color: '#F59E0B',
+      isCurrentUser: currentTeam.id === 'team-birdboss',
+      goodPicks: [
+        { game: 'Week 2 Champion', team: 'Las Vegas Raiders', conf: 15, note: '🏆 WEEK 2 PURSE WINNER: Claimed $25.00 first-place prize with 104 points' },
+        { game: '#2 BUF vs LAC', team: 'Buffalo Bills', conf: 16, note: 'Week 3 Top Anchor: Locked 16 pts on BUF chalk (-7.0)' },
+        { game: '#6 KC vs MIA', team: 'Kansas City Chiefs', conf: 15, note: 'Core Anchor: 15 pts on KC (-11.5)' },
+        { game: '#1 GB vs ATL', team: 'Green Bay Packers', conf: 14, note: 'TNF Anchor: 14 pts on Packers (-6.0) at Lambeau' },
+      ],
+      badPicks: [],
+      netCarnage: '196 pts (Season 1st Place)',
+      maxRemaining: 136,
+      lossTotal: 0,
+      damageGrade: 'A+ (Leader In The Clubhouse)',
+      badge: '👑 Season Leader (196 Pts)',
+      badgeColor: 'bg-amber-950 text-amber-300 border-amber-500/50',
+      outlook: 'CURRENT SEASON LEADER: Amy holds sole possession of 1st place overall with 196 season points following her dominant Week 2 championship. Her Week 3 card leans heavily on consensus chalk anchors (BUF [16], KC [15], GB [14]) to protect her lead.',
+    },
+    {
+      teamId: 'team-shoeman',
+      teamName: 'Shoeman',
+      ownerName: 'Steve',
+      rank: 2,
+      points: 188,
+      avatar: 'SH',
+      color: '#EC4899',
+      isCurrentUser: currentTeam.id === 'team-shoeman',
+      goodPicks: [
+        { game: 'Week 2 Runner-Up', team: 'Buffalo Bills', conf: 16, note: '🥈 WEEK 2 PODIUM: Finished 2nd with 99 pts, just 5 pts back' },
+        { game: '#6 KC vs MIA', team: 'Kansas City Chiefs', conf: 16, note: 'Week 3 Top Anchor: 16 pts on Kansas City (-11.5)' },
+        { game: '#1 GB vs ATL', team: 'Green Bay Packers', conf: 15, note: 'TNF Hammer: 15 pts on Green Bay (-6.0)' },
+      ],
+      badPicks: [],
+      netCarnage: '188 pts (8 pts back of 1st)',
+      maxRemaining: 136,
+      lossTotal: 0,
+      damageGrade: 'A (Top Contender)',
+      badge: '🥈 Season 2nd (188 Pts)',
+      badgeColor: 'bg-cyan-950 text-cyan-300 border-cyan-500/50',
+      outlook: 'CHASING THE TITLE: Steve has put together back-to-back strong weeks and sits only 8 points behind Amy. His Week 3 card features heavy stakes on Kansas City [16] and Green Bay [15] with a differential play on Dallas [11] vs Baltimore.',
+    },
+    {
+      teamId: 'team-snap',
+      teamName: 'Snap Judgments',
+      ownerName: 'Mark',
+      rank: 3,
+      points: 184,
+      avatar: 'SJ',
+      color: '#10B981',
+      isCurrentUser: currentTeam.id === 'team-snap',
+      goodPicks: [
+        { game: '#11 SF vs ARI', team: 'San Francisco 49ers', conf: 16, note: 'Week 3 Top Anchor: 16 pts on SF (-8.5) at home' },
+        { game: '#6 KC vs MIA', team: 'Kansas City Chiefs', conf: 15, note: 'Core Anchor: 15 pts on KC (-11.5)' },
+      ],
+      badPicks: [],
+      netCarnage: '184 pts (12 pts back)',
+      maxRemaining: 136,
+      lossTotal: 0,
+      damageGrade: 'A (Consistent Pace)',
+      badge: '🥉 Season 3rd (184 Pts)',
+      badgeColor: 'bg-emerald-950 text-emerald-300 border-emerald-500/50',
+      outlook: 'CONSISTENCY MACHINE: Mark ranks 3rd overall with 184 points. Avoiding catastrophic losses has been his trademark. He holds a full 136-point ceiling heading into Week 3.',
+    },
+    {
+      teamId: 'team-bijan',
+      teamName: 'Bed Bath & Bijan',
+      ownerName: 'Dalton',
+      rank: 4,
+      points: 181,
+      avatar: 'BB',
+      color: '#06B6D4',
+      isCurrentUser: currentTeam.id === 'team-bijan',
+      goodPicks: [
+        { game: 'Week 1 Co-Champion', team: 'Seattle Seahawks', conf: 16, note: 'Week 1 Title: Split $25 purse at 102 pts' },
+        { game: '#6 KC vs MIA', team: 'Kansas City Chiefs', conf: 16, note: 'Week 3 16-pt Anchor: KC (-11.5)' },
+      ],
+      badPicks: [],
+      netCarnage: '181 pts (15 pts back)',
+      maxRemaining: 136,
+      lossTotal: 0,
+      damageGrade: 'A- (In The Hunt)',
+      badge: '⚡ Week 1 Co-Champ (181 Pts)',
+      badgeColor: 'bg-purple-950 text-purple-300 border-purple-500/50',
+      outlook: 'FORMER CO-CHAMP: Dalton split the purse in Week 1 and remains right in the title hunt. Taking Baltimore [10 pts] at Dallas as his key leverage swing play.',
+    },
+    {
+      teamId: 'team-broncos',
+      teamName: 'BroncosCountry (PatN)',
+      ownerName: 'Patrick',
+      rank: 5,
+      points: 178,
+      avatar: 'BC',
+      color: '#3B82F6',
+      isCurrentUser: currentTeam.id === 'team-broncos',
+      goodPicks: [
+        { game: 'Week 2 3rd Place', team: 'San Francisco 49ers', conf: 16, note: 'Week 2 Bronze: Cashed 96 pts' },
+        { game: '#2 BUF vs LAC', team: 'Buffalo Bills', conf: 16, note: 'Week 3 Top Anchor: 16 pts on Bills (-7.0)' },
+      ],
+      badPicks: [],
+      netCarnage: '178 pts (18 pts back)',
+      maxRemaining: 136,
+      lossTotal: 0,
+      damageGrade: 'B+ (Steady Climb)',
+      badge: '🛡️ Season 5th (178 Pts)',
+      badgeColor: 'bg-blue-950 text-blue-300 border-blue-500/50',
+      outlook: 'SOLID DEFENSIVE CARD: Patrick sits in 5th place. Known for risk mitigation, his card maximizes chalk equity while taking modest leverage on mid-tier matchups.',
+    },
+    {
+      teamId: 'team-todd',
+      teamName: 'CramItUp Your CramHole Lafleur',
+      ownerName: 'Todd Reimer',
+      rank: 9,
+      points: 166,
+      avatar: 'TR',
+      color: '#10B981',
+      isCurrentUser: currentTeam.id === 'team-todd',
+      goodPicks: [
+        { game: 'Week 2 Top Anchor Cashed', team: 'San Francisco 49ers', conf: 16, note: 'Protected #1 anchor in Week 2 blowout' },
+        { game: '#2 BUF vs LAC', team: 'Buffalo Bills', conf: 16, note: 'Week 3 Top Anchor: 16 pts locked on BUF (-7.0)' },
+        { game: '#6 KC vs MIA', team: 'Kansas City Chiefs', conf: 15, note: 'Consensus Hammer: 15 pts on KC (-11.5)' },
+        { game: '#1 GB vs ATL', team: 'Green Bay Packers', conf: 14, note: 'TNF Hammer: 14 pts on Packers at Lambeau' },
+      ],
+      badPicks: [],
+      netCarnage: '166 pts (136 Max Week 3 Ceiling)',
+      maxRemaining: 136,
+      lossTotal: 0,
+      damageGrade: 'A (High Recovery Ceiling)',
+      badge: '🚀 136 Max Runway (Week 3)',
+      badgeColor: 'bg-emerald-950 text-emerald-300 border-emerald-500/50',
+      outlook: 'PRIME BOUNCEBACK CANDIDATE: Todd weathered Week 2 upset storms to preserve season solvency (166 pts). For Week 3, his slate is perfectly structured: top anchors BUF [16], KC [15], GB [14], DET [13], and SF [12] offer a combined 70 points of elite chalk, while Baltimore [9] provides asymmetric leverage to make up ground on Amy and Steve!',
+    },
+  ];
+
+  const pickersAnalysis = currentWeek === 3 ? week3Pickers : currentWeek === 2 ? week2Pickers : week1Pickers;
 
   // Filtered list of pickers
   const filteredPickers = pickersAnalysis.filter(p => {
@@ -259,15 +414,27 @@ export const EndOfDayRecap: React.FC<EndOfDayRecapProps> = ({
               <Calendar className="w-3.5 h-3.5" />
               <span>Week {currentWeek} End-of-Day Gridiron Recap & Outlook</span>
               <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
-                {currentWeek === 2 ? 'ALL 16 OF 16 FINAL • OFFICIAL RESULTS' : '2 OF 16 FINAL'}
+                {currentWeek === 3
+                  ? 'WEEK 3 ACTIVE SLATE • 16 MATCHUPS LOADED'
+                  : currentWeek === 2
+                  ? 'ALL 16 OF 16 FINAL • OFFICIAL RESULTS'
+                  : '2 OF 16 FINAL'}
               </span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1 flex items-center gap-2.5">
-              <span>{currentWeek === 2 ? 'Week 2 Championship Wrap: Bird Boss Takes Title (104 Pts)' : 'The SoFi Upset Bloodbath & Week 1 Trajectory'}</span>
-              <span className="text-xl">{currentWeek === 2 ? '🏆' : '🏈'}</span>
+              <span>
+                {currentWeek === 3
+                  ? 'Week 3 Strategy Matrix: The Chase for Bird Boss (196 Pts)'
+                  : currentWeek === 2
+                  ? 'Week 2 Championship Wrap: Bird Boss Takes Title (104 Pts)'
+                  : 'The SoFi Upset Bloodbath & Week 1 Trajectory'}
+              </span>
+              <span className="text-xl">{currentWeek === 3 ? '⚡' : currentWeek === 2 ? '🏆' : '🏈'}</span>
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-3xl leading-relaxed">
-              {currentWeek === 2
+              {currentWeek === 3
+                ? 'Week 2 is official: Amy (Bird Boss) claimed 1st place ($25 purse, 104 pts). Week 3 card is live with 16 matchups: Green Bay vs Atlanta TNF, consensus anchors KC & BUF, and the BAL @ DAL swing battle!'
+                : currentWeek === 2
                 ? 'Official final recap of all 16 games: Amy (Bird Boss) wins the $25 purse with 104 points, Steve (Shoeman) captures 2nd with 99 pts, and Todd finishes with 69 pts.'
                 : 'Recap of the 2 settled games, picker-by-picker carnage analysis (good vs bad picks), and mathematical outlook for the remaining 14 games of Week 1.'}
             </p>
@@ -309,37 +476,53 @@ export const EndOfDayRecap: React.FC<EndOfDayRecapProps> = ({
         {/* 4 Fast-Stat Impact Metric Badges */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-4 border-t border-slate-800/80 font-mono text-xs">
           <div className="p-3 rounded-xl bg-slate-900/70 border border-amber-900/40 space-y-1">
-            <span className="text-amber-300 text-[11px]">{currentWeek === 2 ? 'Week 2 Champion' : 'Seattle Chalk Hit Rate'}</span>
+            <span className="text-amber-300 text-[11px]">
+              {currentWeek === 3 ? 'Week 2 Champion' : currentWeek === 2 ? 'Week 2 Champion' : 'Seattle Chalk Hit Rate'}
+            </span>
             <div className="text-base font-black text-amber-400 flex items-center gap-1.5">
-              <span>{currentWeek === 2 ? 'Amy • 104 Pts' : '12 / 12 (100%)'}</span>
+              <span>{currentWeek >= 2 ? 'Amy • 104 Pts' : '12 / 12 (100%)'}</span>
               <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
             </div>
-            <span className="text-[10px] text-slate-500">{currentWeek === 2 ? '$25.00 Purse Awarded' : '116 total points collected'}</span>
+            <span className="text-[10px] text-slate-500">
+              {currentWeek >= 2 ? '$25.00 Purse Awarded' : '116 total points collected'}
+            </span>
           </div>
 
           <div className="p-3 rounded-xl bg-slate-900/70 border border-cyan-900/40 space-y-1">
-            <span className="text-cyan-300 text-[11px]">{currentWeek === 2 ? 'Week 2 Runner-Up' : 'Rams Carnage Vaporized'}</span>
+            <span className="text-cyan-300 text-[11px]">
+              {currentWeek === 3 ? 'Season Leader' : currentWeek === 2 ? 'Week 2 Runner-Up' : 'Rams Carnage Vaporized'}
+            </span>
             <div className="text-base font-black text-cyan-400 flex items-center gap-1.5">
-              <span>{currentWeek === 2 ? 'Shoeman • 99 Pts' : '114 Points Lost'}</span>
-              {currentWeek === 2 ? <TrendingUp className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+              <span>{currentWeek === 3 ? 'Bird Boss • 196 Pts' : currentWeek === 2 ? 'Shoeman • 99 Pts' : '114 Points Lost'}</span>
+              {currentWeek >= 2 ? <TrendingUp className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
             </div>
-            <span className="text-[10px] text-slate-500">{currentWeek === 2 ? 'Finished 5 pts back' : '11 of 12 managers burned'}</span>
+            <span className="text-[10px] text-slate-500">
+              {currentWeek === 3 ? 'Holds 8-pt lead over Shoeman' : currentWeek === 2 ? 'Finished 5 pts back' : '11 of 12 managers burned'}
+            </span>
           </div>
 
           <div className="p-3 rounded-xl bg-slate-900/70 border border-blue-900/40 space-y-1">
-            <span className="text-blue-300 text-[11px]">{currentWeek === 2 ? 'Week 2 3rd Place' : 'Current Pool Leader'}</span>
+            <span className="text-blue-300 text-[11px]">
+              {currentWeek === 3 ? 'Week 3 Apex Anchor' : currentWeek === 2 ? 'Week 2 3rd Place' : 'Current Pool Leader'}
+            </span>
             <div className="text-base font-black text-blue-400 truncate">
-              {currentWeek === 2 ? 'BroncosCountry (96 pts)' : 'Orange crush (26 pts)'}
+              {currentWeek === 3 ? 'KC -11.5 vs MIA' : currentWeek === 2 ? 'BroncosCountry (96 pts)' : 'Orange crush (26 pts)'}
             </div>
-            <span className="text-[10px] text-slate-500">{currentWeek === 2 ? 'Hit SF (16) & CIN (3)' : 'Hit SF Upset (+10 pts)'}</span>
+            <span className="text-[10px] text-slate-500">
+              {currentWeek === 3 ? '10 of 12 managers 15+ pts' : currentWeek === 2 ? 'Hit SF (16) & CIN (3)' : 'Hit SF Upset (+10 pts)'}
+            </span>
           </div>
 
           <div className="p-3 rounded-xl bg-slate-900/70 border border-emerald-900/40 space-y-1">
-            <span className="text-emerald-300 text-[11px]">{currentWeek === 2 ? 'Todd Reimer Finish' : "Todd's Max Ceiling"}</span>
+            <span className="text-emerald-300 text-[11px]">
+              {currentWeek === 3 ? "Todd's Upside Ceiling" : currentWeek === 2 ? 'Todd Reimer Finish' : "Todd's Max Ceiling"}
+            </span>
             <div className="text-base font-black text-emerald-400">
-              {currentWeek === 2 ? '69 Points Final' : '127 Points'}
+              {currentWeek === 3 ? '136 Points' : currentWeek === 2 ? '69 Points Final' : '127 Points'}
             </div>
-            <span className="text-[10px] text-slate-500">{currentWeek === 2 ? 'SF #16 + LAR #13 Cashed' : 'Top 7 anchors 100% intact'}</span>
+            <span className="text-[10px] text-slate-500">
+              {currentWeek === 3 ? 'All 16 anchors live on Week 3' : currentWeek === 2 ? 'SF #16 + LAR #13 Cashed' : 'Top 7 anchors 100% intact'}
+            </span>
           </div>
         </div>
       </div>
@@ -350,15 +533,83 @@ export const EndOfDayRecap: React.FC<EndOfDayRecapProps> = ({
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-emerald-400" />
             <h3 className="font-bold text-white text-sm uppercase tracking-wider font-mono">
-              1. Completed Game Results & Pool Consequences (Week {currentWeek})
+              1. {currentWeek === 3 ? 'Week 2 Official Wrap & Week 3 Kickoff' : `Completed Game Results & Pool Consequences (Week ${currentWeek})`}
             </h3>
           </div>
           <span className="text-xs font-mono text-slate-400">
-            {currentWeek === 2 ? 'All 16 Games Settled • Official Final Standings' : 'Scores finalized • Week 1 Early Slate'}
+            {currentWeek === 3
+              ? 'Week 2 Official Final • Week 3 Kickoffs Thursday 8:15 PM'
+              : currentWeek === 2
+              ? 'All 16 Games Settled • Official Final Standings'
+              : 'Scores finalized • Week 1 Early Slate'}
           </span>
         </div>
 
-        {currentWeek === 2 ? (
+        {currentWeek === 3 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Week 2 Settlement Card */}
+            <div className="rounded-xl bg-[#0B0F17] border border-amber-500/30 p-4 space-y-3 flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  WEEK 2 OFFICIAL FINAL • PURSE PAID
+                </span>
+                <span className="text-xs font-mono text-slate-400">All 16 Games Settled</span>
+              </div>
+
+              <div className="flex items-center justify-between py-1">
+                <div>
+                  <div className="text-lg font-black text-white flex items-center gap-2">
+                    <span className="text-amber-400">Bird Boss (Amy)</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-amber-950 text-amber-300 font-mono font-bold border border-amber-500/40">CHAMPION</span>
+                  </div>
+                  <div className="text-xs text-slate-400">Shoeman (99 pts) • BroncosCountry (96 pts)</div>
+                </div>
+                <div className="text-right font-mono">
+                  <span className="text-xl font-black text-amber-400">104 PTS</span>
+                  <div className="text-[10px] text-emerald-400 font-bold">$25.00 Purse Awarded</div>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-amber-950/30 border border-amber-900/40 text-xs text-amber-200 flex items-start gap-2">
+                <Trophy className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">Championship Decider:</span> Amy's 15-pt confidence hammer on the Las Vegas Raiders upset over the Chargers (26-14) clinched 1st place! Todd finished with 69 pts, cashed his 16-pt SF anchor, and reset the board for Week 3.
+                </div>
+              </div>
+            </div>
+
+            {/* Week 3 TNF Spotlight */}
+            <div className="rounded-xl bg-[#0B0F17] border border-emerald-500/30 p-4 space-y-3 flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  WEEK 3 OPENER • THURSDAY NIGHT FOOTBALL
+                </span>
+                <span className="text-xs font-mono text-slate-400">Locks Thursday 8:15 PM ET</span>
+              </div>
+
+              <div className="flex items-center justify-between py-1">
+                <div>
+                  <div className="text-lg font-black text-white flex items-center gap-2">
+                    <span className="text-emerald-400">Green Bay Packers</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 font-mono font-bold border border-emerald-500/40">FAVORED -6.0</span>
+                  </div>
+                  <div className="text-xs text-slate-400">vs Atlanta Falcons @ Lambeau Field</div>
+                </div>
+                <div className="text-right font-mono">
+                  <span className="text-xl font-black text-emerald-400">GB -6.0</span>
+                  <div className="text-[10px] text-slate-400">11 of 12 Locked GB</div>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-900/40 text-xs text-emerald-200 flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">Universal Opening Anchor:</span> Todd loaded 14 points onto Jordan Love and Green Bay at Lambeau. A Packers win unlocks an immediate 14-point base heading into Sunday!
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : currentWeek === 2 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Game 1: 49ers vs Dolphins */}
             <div className="rounded-xl bg-[#0B0F17] border border-emerald-500/30 p-4 space-y-3">
@@ -694,7 +945,7 @@ export const EndOfDayRecap: React.FC<EndOfDayRecapProps> = ({
                 {/* Outlook Narrative */}
                 <div className="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-xs text-slate-300 leading-relaxed font-sans">
                   <span className="font-bold font-mono text-[10px] text-amber-400 uppercase mr-1">
-                    Week 1 Outlook:
+                    Week {currentWeek} Outlook:
                   </span>
                   {p.outlook}
                 </div>
@@ -723,17 +974,17 @@ export const EndOfDayRecap: React.FC<EndOfDayRecapProps> = ({
         </div>
       </div>
 
-      {/* SECTION 3: STRATEGIC OUTLOOK FOR THE REST OF THE WEEK (14 GAMES) */}
+      {/* SECTION 3: STRATEGIC OUTLOOK FOR THE REST OF THE WEEK */}
       <div className="bg-[#151D2A] border border-[#1E293B] rounded-2xl p-5 space-y-5 shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-[#1E293B] pb-3">
           <div className="flex items-center gap-2">
             <Zap className="w-4 h-4 text-amber-400" />
             <h3 className="font-bold text-white text-sm uppercase tracking-wider font-mono">
-              3. Strategic Outlook for the Rest of Week 1 (14 Games Pending)
+              3. Strategic Outlook {currentWeek === 3 ? 'for Week 3 (16 Matchups Loaded)' : currentWeek === 2 ? 'for Week 2 Post-Mortem' : 'for the Rest of Week 1 (14 Games Pending)'}
             </h3>
           </div>
           <span className="text-xs font-mono text-slate-400">
-            Kickoffs starting Sunday 1:00 PM ET
+            {currentWeek === 3 ? 'Locks Thursday 8:15 PM ET (TNF) & Sunday 1:00 PM ET' : currentWeek === 2 ? 'All 16 Games Settled' : 'Kickoffs starting Sunday 1:00 PM ET'}
           </span>
         </div>
 
@@ -744,40 +995,105 @@ export const EndOfDayRecap: React.FC<EndOfDayRecapProps> = ({
             <span>Why Todd Reimer ("CramItUp Your CramHole Lafleur") Holds the Premier Recovery Path:</span>
           </div>
           <p className="text-xs text-slate-300 leading-relaxed">
-            Although Todd sits in 8th place (8 pts) right now, his pick structure is mathematically optimal. He assigned his lower-tier 8 and 9 points to the tricky opening games, <span className="font-bold text-emerald-400">leaving his top 7 highest confidence anchors 100% untouched</span>:
+            {currentWeek === 3
+              ? "Heading into Week 3, Todd holds a pristine 136-point maximum upside. He stacked 58 confidence points on top consensus heavy chalk (BUF, KC, GB, DET), while leveraging Baltimore [9 pts] as a high-EV swing play at Dallas:"
+              : currentWeek === 2
+              ? "Despite absorbing brutal league-wide shockers on Cleveland and New Orleans, Todd protected his #1 16-point anchor on San Francisco (35-13) and rallied on Monday Night Football to bank 69 points:"
+              : "Although Todd sits in 8th place (8 pts) right now, his pick structure is mathematically optimal. He assigned his lower-tier 8 and 9 points to the tricky opening games, leaving his top 7 highest confidence anchors 100% untouched:"}
           </p>
           <div className="flex flex-wrap gap-2 pt-1 font-mono text-xs">
-            <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
-              ⚡ Game 14: LAC (-10) vs ARI [16 pts]
-            </span>
-            <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
-              ⚡ Game 9: JAX (-8.5) vs CLE [15 pts]
-            </span>
-            <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
-              ⚡ Game 4: DET (-7.0) vs NO [14 pts]
-            </span>
-            <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
-              ⚡ Game 13: PHI (-5.0) vs WAS [13 pts]
-            </span>
-            <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
-              ⚡ Game 6: BAL (-3.5) vs IND [12 pts]
-            </span>
-            <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
-              ⚡ Game 7: PIT (-3.5) vs ATL [11 pts]
-            </span>
-            <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
-              ⚡ Game 3: CIN (-3.5) vs TB [10 pts]
-            </span>
+            {currentWeek === 3 ? (
+              <>
+                <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
+                  ⚡ Game 2: BUF (-7.0) vs LAC [16 pts]
+                </span>
+                <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
+                  ⚡ Game 6: KC (-11.5) vs MIA [15 pts]
+                </span>
+                <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
+                  ⚡ Game 1: GB (-6.0) vs ATL [14 pts]
+                </span>
+                <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
+                  ⚡ Game 4: DET (-6.5) vs NYJ [13 pts]
+                </span>
+                <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
+                  ⚡ Game 11: SF (-8.5) vs ARI [12 pts]
+                </span>
+                <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
+                  ⚡ Game 9: SEA (-7.0) vs WSH [11 pts]
+                </span>
+                <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
+                  ⚡ Game 13: BAL (-3.0) @ DAL [9 pts - Leverage Swing]
+                </span>
+              </>
+            ) : currentWeek === 2 ? (
+              <>
+                <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
+                  ✅ Game 14: SF (-8.5) vs MIA [16 pts] - Cashed 35-13
+                </span>
+                <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
+                  ✅ Game 16: LAR (-3.5) @ NYG [13 pts] - Cashed 28-6
+                </span>
+                <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
+                  ✅ Game 4: PHI (-4.5) vs TEN [12 pts] - Cashed 24-20
+                </span>
+                <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
+                  ✅ Game 15: KC (-6.5) @ IND [11 pts] - Cashed 33-30 OT
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
+                  ⚡ Game 14: LAC (-10) vs ARI [16 pts]
+                </span>
+                <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
+                  ⚡ Game 9: JAX (-8.5) vs CLE [15 pts]
+                </span>
+                <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
+                  ⚡ Game 4: DET (-7.0) vs NO [14 pts]
+                </span>
+                <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
+                  ⚡ Game 13: PHI (-5.0) vs WAS [13 pts]
+                </span>
+                <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
+                  ⚡ Game 6: BAL (-3.5) vs IND [12 pts]
+                </span>
+                <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
+                  ⚡ Game 7: PIT (-3.5) vs ATL [11 pts]
+                </span>
+                <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-emerald-500/40 font-bold">
+                  ⚡ Game 3: CIN (-3.5) vs TB [10 pts]
+                </span>
+              </>
+            )}
           </div>
           <p className="text-[11px] text-slate-400 pt-1">
-            <span className="text-amber-300 font-bold">91 Confidence Points</span> are loaded directly onto the 7 heaviest favorites of the week. If these favorites prevail as expected, Todd will surge past Orange crush once opponent hidden picks unlock.
+            {currentWeek === 3 ? (
+              <span>
+                <span className="text-amber-300 font-bold">136 Points Available</span>: Todd's heavy concentration on Buffalo, Kansas City, and Green Bay sets up an ideal foundation to gain on Amy and Steve.
+              </span>
+            ) : currentWeek === 2 ? (
+              <span>
+                <span className="text-amber-300 font-bold">69 Points Locked</span>: Survived the carnage and secured official top-anchor solvency.
+              </span>
+            ) : (
+              <span>
+                <span className="text-amber-300 font-bold">91 Confidence Points</span> are loaded directly onto the 7 heaviest favorites of the week.
+              </span>
+            )}
           </p>
         </div>
 
         {/* 14 Remaining Games Preview Matrix */}
         <div className="space-y-2">
           <div className="text-xs font-mono text-slate-400 font-bold uppercase flex items-center justify-between">
-            <span>Remaining 14 Matchups (Opponent Picks Locked until Kickoff)</span>
+            <span>
+              {currentWeek === 3
+                ? 'All 16 Week 3 Matchups (Thursday & Sunday Slate)'
+                : currentWeek === 2
+                ? 'All 16 Games Settled'
+                : 'Remaining 14 Matchups (Opponent Picks Locked until Kickoff)'}
+            </span>
             <span className="flex items-center gap-1 text-[11px] text-slate-500">
               <Lock className="w-3 h-3" />
               <span>Yahoo Anti-Cheat Lock Active</span>
@@ -787,7 +1103,8 @@ export const EndOfDayRecap: React.FC<EndOfDayRecapProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 font-mono text-xs">
             {pendingGames.map(g => {
               // Check Todd's pick for this game
-              const toddRow = YAHOO_GROUP_PICKS_MATRIX.find(r => r.isCurrentUser);
+              const matrix = currentWeek === 3 ? YAHOO_WEEK_3_PICKS_MATRIX : currentWeek === 2 ? YAHOO_WEEK_2_PICKS_MATRIX : YAHOO_WEEK_1_PICKS_MATRIX;
+              const toddRow = matrix.find(r => r.isCurrentUser);
               const toddPick = toddRow?.picks[g.id];
               const isHeavyFav = g.spread >= 5.0;
 

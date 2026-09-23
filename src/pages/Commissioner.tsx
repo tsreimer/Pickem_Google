@@ -25,9 +25,11 @@ import {
   Mic,
   MessageSquare,
   Database,
-  DollarSign
+  DollarSign,
+  Wand2
 } from 'lucide-react';
 import { TtsAudioProfile, formatTtsPromptPayload } from '../types';
+import { useAudioProfile } from '../context/AudioProfileContext';
 import { KickoffCountdown } from '../components/KickoffCountdown';
 import { CsvImportExportVault } from '../components/CsvImportExportVault';
 import { LeagueTreasuryCard } from '../components/LeagueTreasuryCard';
@@ -44,29 +46,23 @@ export const Commissioner: React.FC = () => {
     teams
   } = useTeam();
 
+  const {
+    profile: activeContextProfile,
+    saveProfile: contextSaveProfile,
+    resetToDefault: contextResetToDefault,
+  } = useAudioProfile();
+
   const [activeSubTab, setActiveSubTab] = useState<'tts-studio' | 'lock-windows' | 'pool-roster' | 'payout-schedule' | 'pool-csv-vault' | 'governance'>('tts-studio');
 
-  // TTS Profile Studio State
-  const [profile, setProfile] = useState<TtsAudioProfile>({
-    id: 'profile-halsted-ivy',
-    name: 'Halsted & Ivy Gridiron War Room',
-    title: '4th Quarter Confidence Sweat & Live Audit',
-    sceneTitle: "Vito & Sal's Broadcast Studio Booth",
-    sceneDescription: 'Inside the laminate studio booth on 35th and Halsted in Chicago. Neon Old Style clock humming, smell of hot giardiniera and dipped au jus, CTA Orange Line rumbling outside.',
-    directorsNotes: {
-      style: 'Enthusiastic, passionate sports radio debate between a gravelly veteran coach and an articulate MIT sports analyst.',
-      pace: 'Rapid-fire, punchy tempo with dramatic pauses before key scoring lines and high-stakes point tallies.',
-      accent: 'Authentic Chicago sports radio baritone paired with crisp articulate analytical delivery.'
-    },
-    sampleContext: 'Coach Sal: Gruff, passionate veteran Chicago sports radio host and gridiron diehard.\nDr. Chloe: Sharp, brilliant MIT Sloan sports analytics director armed with Expected Points Added models.',
-    transcript: 'Coach Sal: [clears throat] Welcome back to the Initech Invitational war room! [shouting with passion] Josh Allen converts on fourth and goal with sixteen seconds remaining! [pause] That is twelve confidence points wiped off the board!\nDr. Chloe: [crisp analytical tone] Exactly Sal. [chuckles] A catastrophic 114 confidence points erased across eight manager cards tonight.',
-    isMultiSpeaker: true,
-    speakerConfigs: [
-      { speaker: 'Coach Sal', voiceName: 'Fenrir', roleContext: 'Gruff, passionate veteran Chicago sports radio host' },
-      { speaker: 'Dr. Chloe', voiceName: 'Kore', roleContext: 'Sharp, brilliant MIT Sloan sports analytics director' }
-    ],
-    isPreset: true
-  });
+  // TTS Profile Studio State (initialized from activeContextProfile)
+  const [profile, setProfile] = useState<TtsAudioProfile>(activeContextProfile);
+
+  // Keep local profile state in sync when context profile changes from external update
+  useEffect(() => {
+    if (activeContextProfile && activeContextProfile.id !== profile.id) {
+      setProfile(activeContextProfile);
+    }
+  }, [activeContextProfile]);
 
   const [presets, setPresets] = useState<TtsAudioProfile[]>([]);
   const [supportedVoices, setSupportedVoices] = useState<Array<{ voiceName: string; gender: string; tone: string; recommendedFor: string }>>([
@@ -106,6 +102,13 @@ export const Commissioner: React.FC = () => {
   const [copiedPayload, setCopiedPayload] = useState(false);
   const [showRawPayload, setShowRawPayload] = useState(false);
   const [dispatchPublished, setDispatchPublished] = useState(false);
+
+  // AI Showrunner & Dynamic Persona Architect State
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [targetScope, setTargetScope] = useState<'full_show' | 'replace_host' | 'replace_cohost' | 'new_scene'>('full_show');
+  const [isGeneratingBlueprint, setIsGeneratingBlueprint] = useState(false);
+  const [blueprintBanner, setBlueprintBanner] = useState<{ title: string; summary: string; icon?: string } | null>(null);
+  const [aiPromptError, setAiPromptError] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const transcriptTextareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -184,89 +187,70 @@ export const Commissioner: React.FC = () => {
       setAudioMeta(null);
       setIsPlaying(false);
 
-      // Auto-save to server immediately so Watercooler and Weekly Recap receive it
-      try {
-        setSaveStatus('saving');
-        const res = await fetch('/api/commissioner/tts-profile', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ profile: updatedProfile }),
-        });
-        const data = await res.json();
-        if (data.success) {
-          setSaveStatus('saved');
-          setTimeout(() => setSaveStatus(null), 3500);
-
-          // Update localStorage so Watercooler picks up the matching persona immediately
-          localStorage.setItem('commissioner_active_preset_id', presetId);
-          if (presetId === 'profile-texas-chalk') {
-            localStorage.setItem('watercooler_speaker1_persona', 'rex');
-            localStorage.setItem('watercooler_voice1', 'Charon');
-          } else if (presetId === 'profile-mit-sloan') {
-            localStorage.setItem('watercooler_speaker1_persona', 'chloe');
-            localStorage.setItem('watercooler_voice1', 'Kore');
-          } else if (presetId === 'profile-commish-ruling') {
-            localStorage.setItem('watercooler_speaker1_persona', 'commish');
-            localStorage.setItem('watercooler_voice1', 'Puck');
-          } else if (presetId === 'profile-halsted-war-room') {
-            localStorage.setItem('watercooler_speaker1_persona', 'sal');
-            localStorage.setItem('watercooler_voice1', 'Fenrir');
-          }
-        } else {
-          setSaveStatus('error');
-        }
-      } catch (e) {
-        console.warn('Auto-save preset failed:', e);
-        setSaveStatus('error');
-      }
+      // Auto-save via AudioProfileContext immediately so Watercooler and Weekly Recap receive it
+      setSaveStatus('saving');
+      const ok = await contextSaveProfile(updatedProfile);
+      setSaveStatus(ok ? 'saved' : 'error');
+      if (ok) setTimeout(() => setSaveStatus(null), 3500);
     }
   };
 
-  // Save active profile to server
+  // Save active profile to server and broadcast
   const handleSaveProfile = async () => {
-    try {
-      setSaveStatus('saving');
-      const res = await fetch('/api/commissioner/tts-profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profile }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSaveStatus('saved');
-        setTimeout(() => setSaveStatus(null), 3500);
-        localStorage.setItem('commissioner_active_preset_id', profile.id);
-        if (profile.id === 'profile-texas-chalk' || profile.name?.toLowerCase().includes('texas')) {
-          localStorage.setItem('watercooler_speaker1_persona', 'rex');
-          localStorage.setItem('watercooler_voice1', 'Charon');
-        } else if (profile.id === 'profile-mit-sloan') {
-          localStorage.setItem('watercooler_speaker1_persona', 'chloe');
-          localStorage.setItem('watercooler_voice1', 'Kore');
-        } else if (profile.id === 'profile-commish-ruling') {
-          localStorage.setItem('watercooler_speaker1_persona', 'commish');
-          localStorage.setItem('watercooler_voice1', 'Puck');
-        }
-      } else {
-        setSaveStatus('error');
-      }
-    } catch (e) {
-      setSaveStatus('error');
-    }
+    setSaveStatus('saving');
+    const ok = await contextSaveProfile(profile);
+    setSaveStatus(ok ? 'saved' : 'error');
+    if (ok) setTimeout(() => setSaveStatus(null), 3500);
   };
 
   // Reset to default
   const handleResetDefault = async () => {
+    await contextResetToDefault();
+    setAudioUrl(null);
+    setAudioMeta(null);
+    setIsPlaying(false);
+    setBlueprintBanner(null);
+  };
+
+  // AI Showrunner: Dynamically generate & populate all fields based on high-level natural language prompt
+  const handleGenerateBlueprint = async (promptOverride?: string) => {
+    const query = (promptOverride !== undefined ? promptOverride : aiPrompt).trim();
+    if (!query) {
+      setAiPromptError('Please describe the persona, accent, or scene (e.g. "urban New Yorker in Todd\'s basement").');
+      return;
+    }
+    setAiPromptError(null);
+    setIsGeneratingBlueprint(true);
     try {
-      const res = await fetch('/api/commissioner/tts-profile/reset', { method: 'POST' });
+      const res = await fetch('/api/commissioner/tts-generate-persona', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          description: query,
+          targetScope,
+          currentProfile: profile,
+        }),
+      });
       const data = await res.json();
-      if (data.success && data.activeProfile) {
-        setProfile(data.activeProfile);
+      if (data.success && data.profile) {
+        setProfile(data.profile);
+        setBlueprintBanner({
+          title: data.profile.name,
+          summary: data.profile.summaryNotes || `Dynamically generated ${data.profile.speakerConfigs[0]?.speaker || 'host'} in ${data.profile.sceneTitle}`,
+          icon: data.profile.icon || '🎙️',
+        });
         setAudioUrl(null);
         setAudioMeta(null);
         setIsPlaying(false);
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus(null), 3500);
+      } else {
+        setAiPromptError(data.error || 'Failed to generate persona blueprint. Please try again.');
       }
-    } catch (e) {
-      console.warn('Failed to reset profile:', e);
+    } catch (err: any) {
+      setAiPromptError(err?.message || 'Error communicating with AI Showrunner.');
+    } finally {
+      setIsGeneratingBlueprint(false);
     }
   };
 
@@ -289,7 +273,7 @@ export const Commissioner: React.FC = () => {
         setAudioUrl(data.audioUrl);
         setAudioDuration(data.durationSeconds || 12);
         setAudioMeta({
-          modelUsed: data.modelUsed || 'gemini-3.1-flash-tts-preview',
+          modelUsed: data.modelUsed || 'gemini-3.8-flash-tts',
           cached: data.cached,
           voiceName: data.voiceName,
           isFallback: false,
@@ -557,11 +541,202 @@ export const Commissioner: React.FC = () => {
             </div>
           </div>
 
+          {/* AI Showrunner & Dynamic Character Architect (Natural Language Studio Generator) */}
+          <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-slate-900 to-cyan-500/10 border border-amber-500/30 shadow-2xl space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 flex items-center justify-center text-black shadow-lg shadow-amber-500/25 shrink-0">
+                  <Wand2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <span>AI Showrunner &amp; Character Architect</span>
+                    </h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-bold border border-amber-400/30">
+                      High-Level Prompt Driven
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 font-mono">
+                      Gemini 3.8 Intelligence
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Just describe the new host, co-host, accent, or studio location. Gemini automatically re-architects and updates all studio fields, transcripts, voice assignments, and scene descriptions dynamically!
+                  </p>
+                </div>
+              </div>
+
+              {/* Target Scope Tabs */}
+              <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setTargetScope('full_show')}
+                  className={`px-2.5 py-1 rounded-lg font-semibold transition ${
+                    targetScope === 'full_show'
+                      ? 'bg-amber-400 text-black shadow-sm font-bold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Generate a brand new show with custom host, co-host, scene, and dialogue"
+                >
+                  Full Show
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTargetScope('replace_host')}
+                  className={`px-2.5 py-1 rounded-lg font-semibold transition ${
+                    targetScope === 'replace_host'
+                      ? 'bg-amber-400 text-black shadow-sm font-bold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Replace Lead Host (Speaker 1), keeping Co-Host intact"
+                >
+                  Replace Host (Spk 1)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTargetScope('replace_cohost')}
+                  className={`px-2.5 py-1 rounded-lg font-semibold transition ${
+                    targetScope === 'replace_cohost'
+                      ? 'bg-amber-400 text-black shadow-sm font-bold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Replace Co-Host (Speaker 2), keeping Lead Host intact"
+                >
+                  Replace Co-Host
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTargetScope('new_scene')}
+                  className={`px-2.5 py-1 rounded-lg font-semibold transition ${
+                    targetScope === 'new_scene'
+                      ? 'bg-amber-400 text-black shadow-sm font-bold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Move the broadcast to a brand new acoustic setting (e.g. Todd's basement)"
+                >
+                  Move Scene
+                </button>
+              </div>
+            </div>
+
+            {/* Natural Language Prompt Input Bar & Generate Action */}
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={aiPrompt}
+                  onChange={e => setAiPrompt(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !isGeneratingBlueprint) {
+                      handleGenerateBlueprint();
+                    }
+                  }}
+                  placeholder="e.g. Urban New Yorker or multicultural London English primary speaker broadcasting live from Todd's basement..."
+                  className="w-full bg-slate-950/90 border border-slate-700 hover:border-slate-600 focus:border-amber-400 rounded-xl px-4 py-3 text-xs md:text-sm text-white placeholder-slate-500 focus:outline-none transition font-medium pr-10 shadow-inner"
+                />
+                {aiPrompt && (
+                  <button
+                    type="button"
+                    onClick={() => setAiPrompt('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-sm font-bold"
+                  >
+                    &times;
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleGenerateBlueprint()}
+                disabled={isGeneratingBlueprint}
+                className={`px-6 py-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center gap-2 transition shadow-lg shrink-0 cursor-pointer ${
+                  isGeneratingBlueprint
+                    ? 'bg-amber-400/50 text-black cursor-wait'
+                    : 'bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black shadow-amber-500/20 hover:scale-[1.01]'
+                }`}
+              >
+                {isGeneratingBlueprint ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-black" />
+                    <span>Architecting Show...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 text-black" />
+                    <span>Generate &amp; Fill Studio</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Quick Inspiration Chips */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mr-1">
+                Try Prompt:
+              </span>
+              {[
+                { label: "🗽 Urban New Yorker in Todd's Basement", prompt: "Urban New Yorker primary speaker broadcasting live from Todd's basement in Milwaukee" },
+                { label: "🇬🇧 Multicultural London English (MLE)", prompt: "Multicultural London English (MLE) primary speaker broadcasting live from Todd's basement rec room" },
+                { label: "🏴󠁧󠁢󠁳󠁣󠁴󠁿 Scottish Pub Owner Ranting", prompt: "Fiery Scottish pub owner ripping into coward chalk picks alongside Dr. Chloe" },
+                { label: "☘️ Boston Southie Screamer", prompt: "Boston Southie sports radio caller in Todd's cellar screaming over missed kicks" },
+                { label: "🤠 Texas Tailgate Master & Smoker", prompt: "Rex Vance boisterous Texas tailgate master with high-stakes chalk bravado" },
+                { label: "🌴 Miami Poolside DJ & Vibes", prompt: "Charismatic Miami poolside DJ breaking down survivor sweat with Dr. Chloe" }
+              ].map(chip => (
+                <button
+                  key={chip.label}
+                  type="button"
+                  onClick={() => {
+                    setAiPrompt(chip.prompt);
+                    handleGenerateBlueprint(chip.prompt);
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-slate-950/80 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 text-slate-300 hover:text-white text-xs transition cursor-pointer flex items-center gap-1"
+                >
+                  <span>{chip.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Success Banner when blueprint is generated */}
+            {blueprintBanner && (
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/40 flex items-start justify-between gap-3 animate-fadeIn">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">{blueprintBanner.icon || '🎙️'}</span>
+                  <div>
+                    <div className="text-xs font-bold text-amber-300 flex items-center gap-2 flex-wrap">
+                      <span>Show Blueprint Loaded: &quot;{blueprintBanner.title}&quot;</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-mono font-bold">
+                        All Fields Dynamically Populated
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300 mt-1 leading-relaxed">{blueprintBanner.summary}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleGenerateBlueprint()}
+                  disabled={isGeneratingBlueprint}
+                  className="px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-black text-xs font-bold transition flex items-center gap-1.5 shrink-0 shadow-sm cursor-pointer"
+                  title="Regenerate another creative variation with this description"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Regenerate</span>
+                </button>
+              </div>
+            )}
+
+            {aiPromptError && (
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-300 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                <span>{aiPromptError}</span>
+              </div>
+            )}
+          </div>
+
           {/* Raw Markdown Payload Drawer / Card (When toggled) */}
           {showRawPayload && (
             <div className="p-4 rounded-xl bg-black/80 border border-amber-500/40 space-y-2">
               <div className="flex items-center justify-between text-xs text-amber-400 font-mono font-bold">
-                <span>Direct Prompt Payload to gemini-3.1-flash-tts-preview</span>
+                <span>Direct Prompt Payload to gemini-3.8-flash-tts</span>
                 <span className="text-slate-400">Formatted per Google TTS Prompt Guide</span>
               </div>
               <pre className="text-xs font-mono text-emerald-300 bg-slate-950 p-4 rounded-lg overflow-x-auto whitespace-pre-wrap leading-relaxed border border-slate-800 max-h-72">
@@ -594,16 +769,26 @@ export const Commissioner: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                      # AUDIO PROFILE Name
+                    <label className="block text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
+                      <span># AUDIO PROFILE Name</span>
+                      <span className="text-[10px] text-amber-400 font-mono">Profile Icon &amp; Slug</span>
                     </label>
-                    <input
-                      type="text"
-                      value={profile.name}
-                      onChange={e => setProfile({ ...profile, name: e.target.value })}
-                      placeholder="e.g. Chicago War Room Dispatch"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 font-medium"
-                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={profile.icon || '🎙️'}
+                        onChange={e => setProfile({ ...profile, icon: e.target.value })}
+                        className="w-11 text-center bg-slate-950 border border-slate-700 rounded-xl py-2 text-base text-white focus:outline-none focus:border-amber-400 shrink-0"
+                        title="Profile Emoji Icon (e.g. 🗽, 🇬🇧, 🎙️, 🤠)"
+                      />
+                      <input
+                        type="text"
+                        value={profile.name}
+                        onChange={e => setProfile({ ...profile, name: e.target.value })}
+                        placeholder="e.g. Chicago War Room Dispatch"
+                        className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 font-medium"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -619,6 +804,22 @@ export const Commissioner: React.FC = () => {
                     />
                   </div>
                 </div>
+
+                {/* Sub-titles / Roles if generated */}
+                {(profile.hostTitle || profile.coHostTitle) && (
+                  <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center gap-2">
+                    {profile.hostTitle && (
+                      <span className="text-[10px] px-2.5 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-mono">
+                        Lead Host Role: {profile.hostTitle}
+                      </span>
+                    )}
+                    {profile.coHostTitle && (
+                      <span className="text-[10px] px-2.5 py-0.5 rounded-md bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-mono">
+                        Co-Host Role: {profile.coHostTitle}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Section 2: THE SCENE */}
@@ -779,12 +980,22 @@ export const Commissioner: React.FC = () => {
                   {/* Speaker 1 */}
                   <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-                        Primary Speaker (Speaker 1)
-                      </span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono">
-                        Lead Voice
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-base">{profile.speakerConfigs[0]?.avatar || '🎙️'}</span>
+                        <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
+                          Primary Speaker (Speaker 1)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {profile.hostTitle && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-mono">
+                            {profile.hostTitle}
+                          </span>
+                        )}
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono">
+                          Lead Voice
+                        </span>
+                      </div>
                     </div>
 
                     {/* Persona Presets for Speaker 1 */}
@@ -876,12 +1087,22 @@ export const Commissioner: React.FC = () => {
                   {profile.isMultiSpeaker ? (
                     <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">
-                          Co-Host / Counterpart (Speaker 2)
-                        </span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono">
-                          Dual Dialogue
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-base">{profile.speakerConfigs[1]?.avatar || '📊'}</span>
+                          <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">
+                            Co-Host / Counterpart (Speaker 2)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {profile.coHostTitle && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300 font-mono">
+                              {profile.coHostTitle}
+                            </span>
+                          )}
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono">
+                            Dual Dialogue
+                          </span>
+                        </div>
                       </div>
 
                       {/* Persona Presets for Speaker 2 */}
@@ -1116,7 +1337,7 @@ export const Commissioner: React.FC = () => {
                             {profile.title || 'Broadcast Preview'}
                           </div>
                           <div className="text-[10px] text-slate-400 font-mono">
-                            {audioMeta?.modelUsed || 'gemini-3.1-flash-tts-preview'}
+                            {audioMeta?.modelUsed || 'gemini-3.8-flash-tts'}
                           </div>
                         </div>
                       </div>

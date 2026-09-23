@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useTeam } from '../context/TeamContext';
+import { useAudioProfile } from '../context/AudioProfileContext';
 import { AUDIO_TRACKS } from '../data/mockData';
 import { AudioBroadcastTrack, TalkShowSpeaker } from '../types';
 import { EndOfDayRecap } from '../components/EndOfDayRecap';
@@ -236,45 +237,43 @@ export const Watercooler: React.FC = () => {
   const [selectedStyleId, setSelectedStyleId] = useState<string>(() => {
     return localStorage.getItem('watercooler_style') || 'rapid_crossfire';
   });
-  const [commissionerProfile, setCommissionerProfile] = useState<any>(null);
+  const { profile: activeAudioProfile, primaryHost, coHost, currentModel: activeTtsModel } = useAudioProfile();
+  const [commissionerProfile, setCommissionerProfile] = useState<any>(activeAudioProfile);
   const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
   const [isSynthesizing, setIsSynthesizing] = useState<boolean>(false);
   const [synthesisError, setSynthesisError] = useState<string | null>(null);
-  const [activeModelUsed, setActiveModelUsed] = useState<string>('gemini-3.1-flash-tts-preview');
+  const [activeModelUsed, setActiveModelUsed] = useState<string>('gemini-3.8-flash-tts');
   const [audioUrlMap, setAudioUrlMap] = useState<Record<string, string>>({});
   const [ttsQuotaExceeded, setTtsQuotaExceeded] = useState<boolean>(false);
   const [isHighDemand, setIsHighDemand] = useState<boolean>(false);
   const [ttsNotice, setTtsNotice] = useState<string | null>(null);
 
-  // Synchronize with active Commissioner Audio Profile on mount
+  // Synchronize with active Commissioner Audio Profile immediately
   useEffect(() => {
-    fetch('/api/commissioner/tts-profile')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.activeProfile) {
-          setCommissionerProfile(data.activeProfile);
-          const prof = data.activeProfile;
-          const isTexas = prof.id === 'profile-texas-chalk' || prof.name?.toLowerCase().includes('texas');
-          const isMit = prof.id === 'profile-mit-sloan' || prof.name?.toLowerCase().includes('mit');
-          const isCommish = prof.id === 'profile-commish-ruling' || prof.name?.toLowerCase().includes('commish');
+    if (activeAudioProfile) {
+      setCommissionerProfile(activeAudioProfile);
+      if (primaryHost?.voiceName) {
+        setSelectedVoice1(primaryHost.voiceName);
+      }
+      if (coHost?.voiceName) {
+        setSelectedVoice2(coHost.voiceName);
+      }
 
-          if (isTexas) {
-            setSelectedSpeaker1PersonaId('rex');
-            setSelectedVoice1(prof.speakerConfigs?.[0]?.voiceName || 'Charon');
-          } else if (isMit) {
-            setSelectedSpeaker1PersonaId('chloe');
-            setSelectedVoice1(prof.speakerConfigs?.[0]?.voiceName || 'Kore');
-          } else if (isCommish) {
-            setSelectedSpeaker1PersonaId('commish');
-            setSelectedVoice1(prof.speakerConfigs?.[0]?.voiceName || 'Puck');
-          } else if (prof.id === 'profile-halsted-war-room') {
-            setSelectedSpeaker1PersonaId('sal');
-            setSelectedVoice1(prof.speakerConfigs?.[0]?.voiceName || 'Fenrir');
-          }
-        }
-      })
-      .catch(err => console.warn('Could not sync commissioner profile in Watercooler:', err));
-  }, []);
+      const isTexas = activeAudioProfile.id === 'profile-texas-chalk' || activeAudioProfile.name?.toLowerCase().includes('texas');
+      const isMit = activeAudioProfile.id === 'profile-mit-sloan' || activeAudioProfile.name?.toLowerCase().includes('mit');
+      const isCommish = activeAudioProfile.id === 'profile-commish-ruling' || activeAudioProfile.name?.toLowerCase().includes('commish');
+
+      if (isTexas) {
+        setSelectedSpeaker1PersonaId('rex');
+      } else if (isMit) {
+        setSelectedSpeaker1PersonaId('chloe');
+      } else if (isCommish) {
+        setSelectedSpeaker1PersonaId('commish');
+      } else {
+        setSelectedSpeaker1PersonaId('sal');
+      }
+    }
+  }, [activeAudioProfile, primaryHost, coHost]);
 
   const handleSaveVoiceConfig = () => {
     localStorage.setItem('watercooler_speaker1_persona', selectedSpeaker1PersonaId);
@@ -282,8 +281,8 @@ export const Watercooler: React.FC = () => {
     localStorage.setItem('watercooler_voice2', selectedVoice2);
     localStorage.setItem('watercooler_cohost', selectedCohostId);
     localStorage.setItem('watercooler_style', selectedStyleId);
-    const spk1Obj = SPEAKER_PERSONAS.find(p => p.id === selectedSpeaker1PersonaId) || SPEAKER_PERSONAS[0];
-    const cohostObj = SPEAKER_PERSONAS.find(c => c.id === selectedCohostId) || SPEAKER_PERSONAS[1];
+    const spk1Obj = dynamicSpeakerPersonas.find(p => p.id === selectedSpeaker1PersonaId) || dynamicSpeakerPersonas[0];
+    const cohostObj = dynamicSpeakerPersonas.find(c => c.id === selectedCohostId) || dynamicSpeakerPersonas[1];
     const styleObj = STYLE_PRESETS.find(s => s.id === selectedStyleId) || STYLE_PRESETS[0];
     setSaveFeedback(`✓ Saved: ${spk1Obj.name} (${selectedVoice1}) & ${cohostObj.name} (${selectedVoice2}) • ${styleObj.label}`);
     setTimeout(() => {
@@ -415,9 +414,36 @@ export const Watercooler: React.FC = () => {
       },
     });
   };
+  // Dynamic Speaker Personas list that updates with customized host/co-host names, titles, and voices
+  const dynamicSpeakerPersonas = useMemo(() => {
+    return SPEAKER_PERSONAS.map(p => {
+      if (p.id === 'sal') {
+        return {
+          ...p,
+          name: primaryHost.speaker || p.name,
+          title: primaryHost.title || p.title,
+          avatar: primaryHost.avatar || p.avatar,
+          voiceName: primaryHost.voiceName || p.voiceName,
+          role: primaryHost.roleContext || p.role,
+        };
+      }
+      if (p.id === 'chloe') {
+        return {
+          ...p,
+          name: coHost.speaker || p.name,
+          title: coHost.title || p.title,
+          avatar: coHost.avatar || p.avatar,
+          voiceName: coHost.voiceName || p.voiceName,
+          role: coHost.roleContext || p.role,
+        };
+      }
+      return p;
+    });
+  }, [primaryHost, coHost]);
+
   const activeStyle = STYLE_PRESETS.find(s => s.id === selectedStyleId) || STYLE_PRESETS[0];
-  const activeSpeaker1Persona = SPEAKER_PERSONAS.find(p => p.id === selectedSpeaker1PersonaId) || SPEAKER_PERSONAS[0];
-  const activeCohost = SPEAKER_PERSONAS.find(c => c.id === selectedCohostId) || SPEAKER_PERSONAS[1];
+  const activeSpeaker1Persona = dynamicSpeakerPersonas.find(p => p.id === selectedSpeaker1PersonaId) || dynamicSpeakerPersonas[0];
+  const activeCohost = dynamicSpeakerPersonas.find(c => c.id === selectedCohostId) || dynamicSpeakerPersonas[1];
 
   // Dynamic speaker detection for live talk show avatar pulse
   const turnsCount = activeTrack.dialogueTurns?.length || 0;
@@ -829,7 +855,7 @@ export const Watercooler: React.FC = () => {
         scriptText: data.radio_script_text,
         audioUrl: data.audioUrl,
         voiceName: `${selectedVoice1} + ${selectedVoice2}`,
-        modelUsed: data.modelUsed || 'gemini-3.1-flash-tts-preview',
+        modelUsed: data.modelUsed || 'gemini-3.8-flash-tts',
         characterPersona: data.character_persona,
         sceneBackstory: data.scene_backstory,
         directorsNotes: `${activeStyle.prompt}. Speaker 1 (${selectedVoice1}) is ${speaker1Data.name}. Speaker 2 (${selectedVoice2}) is ${speaker2Data.name}.`,
@@ -943,14 +969,14 @@ export const Watercooler: React.FC = () => {
             <span>Section 7.0 & 8.0 • Automated AI Media & Multi-Speaker Sports Talk Show</span>
           </div>
           <h2 className="text-2xl font-black text-white tracking-tight mt-1 flex items-center gap-2">
-            <span>Halsted & Ivy: The Gridiron Talk Show Studio</span>
+            <span>{activeAudioProfile?.name || 'Halsted & Ivy: The Gridiron Talk Show Studio'}</span>
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-gradient-to-r from-orange-950 to-purple-950 text-amber-300 border border-orange-700/60 font-mono font-bold flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5 text-orange-400" />
-              <span>Multi-Speaker Gemini TTS</span>
+              <span>Multi-Speaker Gemini 3.8 TTS</span>
             </span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Prompt-steered dual-host sports debate pairing passionate South-Side Chicago beef counter legend <span className="text-amber-400 font-bold">Coach Sal (Mike Ditka cadence)</span> with contrasting football archetypes, powered by <span className="text-purple-400 font-mono">gemini-3.1-flash-tts-preview</span>.
+            Prompt-steered dual-host sports debate pairing <span className="text-amber-400 font-bold">{primaryHost.speaker} ({primaryHost.voiceName})</span> with <span className="text-cyan-400 font-bold">{coHost.speaker} ({coHost.voiceName})</span>, powered by <span className="text-purple-400 font-mono">gemini-3.8-flash-tts</span>.
           </p>
         </div>
 
@@ -1120,7 +1146,7 @@ export const Watercooler: React.FC = () => {
             <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
               <span className="text-slate-400">Switch Speaker 1:</span>
               <div className="flex items-center gap-1.5 flex-wrap">
-                {SPEAKER_PERSONAS.map(p => {
+                {dynamicSpeakerPersonas.map(p => {
                   const isActive = selectedSpeaker1PersonaId === p.id;
                   return (
                     <button
@@ -1198,7 +1224,7 @@ export const Watercooler: React.FC = () => {
             <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
               <span className="text-slate-400">Switch Speaker 2:</span>
               <div className="flex items-center gap-1.5 flex-wrap">
-                {SPEAKER_PERSONAS.map(c => {
+                {dynamicSpeakerPersonas.map(c => {
                   const isActive = selectedCohostId === c.id;
                   return (
                     <button
@@ -1364,7 +1390,7 @@ export const Watercooler: React.FC = () => {
                     <span className="text-[10px] text-slate-400 font-normal">Select Lead Persona</span>
                   </label>
                   <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
-                    {SPEAKER_PERSONAS.map(p => {
+                    {dynamicSpeakerPersonas.map(p => {
                       const isSelected = selectedSpeaker1PersonaId === p.id;
                       return (
                         <button
@@ -1434,7 +1460,7 @@ export const Watercooler: React.FC = () => {
                     <span className="text-[10px] text-slate-400 font-normal">Select Debate Partner</span>
                   </label>
                   <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
-                    {SPEAKER_PERSONAS.map(c => {
+                    {dynamicSpeakerPersonas.map(c => {
                       const isSelected = selectedCohostId === c.id;
                       return (
                         <button
@@ -1696,7 +1722,7 @@ export const Watercooler: React.FC = () => {
               "{activeTrack.title}"
             </h4>
             <p className="text-xs text-slate-400 font-mono">
-              {activeTrack.subtitle} • {activeTrack.isMultiSpeaker ? `Hosts: ${activeTrack.speaker1?.name || activeSpeaker1Persona.name} (${selectedVoice1}) & ${activeTrack.speaker2?.name || activeCohost.name} (${selectedVoice2})` : `Voice: ${selectedVoice1}`} • Gemini 3.1 Flash TTS
+              {activeTrack.subtitle} • {activeTrack.isMultiSpeaker ? `Hosts: ${activeTrack.speaker1?.name || activeSpeaker1Persona.name} (${selectedVoice1}) & ${activeTrack.speaker2?.name || activeCohost.name} (${selectedVoice2})` : `Voice: ${selectedVoice1}`} • Gemini 3.8 Flash TTS
             </p>
           </div>
 
@@ -1871,7 +1897,7 @@ export const Watercooler: React.FC = () => {
               <div className="flex items-center justify-between text-xs font-mono">
                 <span className="text-purple-300 font-bold flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                  <span>gemini-3.1-flash-tts-preview Multi-Speaker Configuration</span>
+                  <span>gemini-3.8-flash-tts Multi-Speaker Configuration</span>
                 </span>
                 <span className="text-[10px] text-slate-400 font-mono">
                   MultiSpeakerVoiceConfig Payload
@@ -1883,7 +1909,7 @@ export const Watercooler: React.FC = () => {
                 <span className="text-[10px] font-mono text-purple-400 uppercase font-bold">API speechConfig Payload:</span>
                 <pre className="text-[11px] text-purple-200 overflow-x-auto whitespace-pre-wrap font-mono leading-relaxed">
 {JSON.stringify({
-  model: 'gemini-3.1-flash-tts-preview',
+  model: 'gemini-3.8-flash-tts',
   speechConfig: {
     multiSpeakerVoiceConfig: {
       speakerVoiceConfigs: [

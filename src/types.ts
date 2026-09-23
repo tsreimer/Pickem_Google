@@ -249,6 +249,7 @@ export interface TtsSpeakerConfig {
   speaker: string;
   voiceName: string;
   roleContext: string;
+  avatar?: string;
 }
 
 export interface TtsDirectorsNotes {
@@ -270,6 +271,10 @@ export interface TtsAudioProfile {
   speakerConfigs: TtsSpeakerConfig[];
   updatedAt?: string;
   isPreset?: boolean;
+  icon?: string; // e.g. 🎙️, 🇬🇧, 🗽, 🏈
+  summaryNotes?: string;
+  hostTitle?: string;
+  coHostTitle?: string;
 }
 
 export function formatTtsPromptPayload(profile: TtsAudioProfile): string {

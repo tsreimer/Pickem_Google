@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTeam } from '../context/TeamContext';
+import { useAudioProfile } from '../context/AudioProfileContext';
 import { audioPreGenerationService } from '../services/audioPreGenerationService';
 import { speechEngine } from '../utils/speechEngine';
 import {
@@ -50,6 +51,7 @@ export const IndividualPickerAudioAdvice: React.FC<IndividualPickerAudioAdvicePr
   onAskCoachClick,
 }) => {
   const { currentTeam, teams, setCurrentTeamId, addComment } = useTeam();
+  const { profile: activeProfile, primaryHost, coHost } = useAudioProfile();
   const [selectedPickerId, setSelectedPickerId] = useState<string>(
     initialSelectedPickerId || currentTeam?.id || 'team-todd'
   );
@@ -67,7 +69,7 @@ export const IndividualPickerAudioAdvice: React.FC<IndividualPickerAudioAdvicePr
   const [ttsQuotaExceeded, setTtsQuotaExceeded] = useState<boolean>(false);
   const [isHighDemand, setIsHighDemand] = useState<boolean>(false);
   const [ttsNotice, setTtsNotice] = useState<string | null>(null);
-  const [activeModelUsed, setActiveModelUsed] = useState<string>('gemini-3.1-flash-tts-preview');
+  const [activeModelUsed, setActiveModelUsed] = useState<string>('gemini-3.8-flash-tts');
   const [sharedNotice, setSharedNotice] = useState<string | null>(null);
   const [activeSentenceIndex, setActiveSentenceIndex] = useState<number>(-1);
   const [totalSentences, setTotalSentences] = useState<number>(0);
@@ -119,20 +121,20 @@ export const IndividualPickerAudioAdvice: React.FC<IndividualPickerAudioAdvicePr
   // Speaker metadata
   const speakerMeta = {
     sal: {
-      name: 'Coach Sal Ditkofsky',
-      title: 'South-Side Chicago Beef Stand Owner & 1985 Bears Disciple',
-      avatar: '🥩',
-      voiceName: 'Fenrir',
+      name: primaryHost.speaker || 'Coach Sal Ditkofsky',
+      title: primaryHost.title || 'South-Side Chicago Beef Stand Owner & 1985 Bears Disciple',
+      avatar: primaryHost.avatar || '🥩',
+      voiceName: primaryHost.voiceName || 'Fenrir',
       color: '#EA580C',
-      styleTag: 'Mike Ditka Accent • Tough Love & Intangibles',
+      styleTag: activeProfile.directorsNotes?.accent || 'Mike Ditka Accent • Tough Love & Intangibles',
     },
     chloe: {
-      name: 'Dr. Chloe Vance',
-      title: 'MIT Sloan Sports Analytics Director & NextGen Stats Lead',
-      avatar: '📊',
-      voiceName: 'Kore',
+      name: coHost.speaker || 'Dr. Chloe Vance',
+      title: coHost.title || 'MIT Sloan Sports Analytics Director & NextGen Stats Lead',
+      avatar: coHost.avatar || '📊',
+      voiceName: coHost.voiceName || 'Kore',
       color: '#06B6D4',
-      styleTag: 'Ivy League Precision • Expected Points Added & EV',
+      styleTag: activeProfile.directorsNotes?.style || 'Ivy League Precision • Expected Points Added & EV',
     },
     commish: {
       name: 'The Commish AI',
@@ -379,7 +381,7 @@ export const IndividualPickerAudioAdvice: React.FC<IndividualPickerAudioAdvicePr
           audioRef.current.load();
           await audioRef.current.play();
           setIsPlaying(true);
-          setSynthesisNotice(`⚡ Playing Gemini Neural Audio (${speakerMeta.voiceName} • ${data.modelUsed || 'gemini-3.1-flash-tts-preview'})`);
+          setSynthesisNotice(`⚡ Playing Gemini Neural Audio (${speakerMeta.voiceName} • ${data.modelUsed || 'gemini-3.8-flash-tts'})`);
         }
         return;
       }
@@ -652,12 +654,12 @@ export const IndividualPickerAudioAdvice: React.FC<IndividualPickerAudioAdvicePr
             {mode === 'private_portal' ? '1. CHOOSE YOUR STRATEGY COMMENTATOR:' : '2. SELECT WHO DELIVERS THE ADVICE:'}
           </span>
           <span className="text-[11px] text-emerald-400 font-bold">
-            Default: Coach Sal Ditkofsky (Pre-loaded)
+            Default: {primaryHost.speaker || 'Coach Sal Ditkofsky'} (Pre-loaded)
           </span>
         </label>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-          {/* Coach Sal */}
+          {/* Coach / Host 1 */}
           <button
             onClick={() => setSelectedSpeaker('sal')}
             className={`p-3 rounded-xl border text-left transition flex items-center gap-3 cursor-pointer ${
@@ -667,20 +669,20 @@ export const IndividualPickerAudioAdvice: React.FC<IndividualPickerAudioAdvicePr
             }`}
           >
             <div className="text-2xl p-2 rounded-lg bg-orange-900/40 border border-orange-700/60 shrink-0">
-              🥩
+              {primaryHost.avatar || '🥩'}
             </div>
             <div className="min-w-0">
               <div className="font-black text-xs text-orange-300 flex items-center gap-1.5">
-                <span>Coach Sal Ditkofsky</span>
+                <span>{primaryHost.speaker || 'Coach Sal Ditkofsky'}</span>
                 <span className="text-[9px] px-1.5 py-0.2 rounded bg-orange-950 text-orange-400 border border-orange-800">
-                  Fenrir
+                  {primaryHost.voiceName || 'Fenrir'}
                 </span>
               </div>
-              <div className="text-[10px] text-slate-400 truncate">1985 Bears Grit & South-Side Tough Love</div>
+              <div className="text-[10px] text-slate-400 truncate">{primaryHost.title || '1985 Bears Grit & South-Side Tough Love'}</div>
             </div>
           </button>
 
-          {/* Dr. Chloe */}
+          {/* Dr. Chloe / Host 2 */}
           <button
             onClick={() => setSelectedSpeaker('chloe')}
             className={`p-3 rounded-xl border text-left transition flex items-center gap-3 cursor-pointer ${
@@ -690,16 +692,16 @@ export const IndividualPickerAudioAdvice: React.FC<IndividualPickerAudioAdvicePr
             }`}
           >
             <div className="text-2xl p-2 rounded-lg bg-cyan-900/40 border border-cyan-700/60 shrink-0">
-              📊
+              {coHost.avatar || '📊'}
             </div>
             <div className="min-w-0">
               <div className="font-black text-xs text-cyan-300 flex items-center gap-1.5">
-                <span>Dr. Chloe Vance</span>
+                <span>{coHost.speaker || 'Dr. Chloe Vance'}</span>
                 <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">
-                  Kore
+                  {coHost.voiceName || 'Kore'}
                 </span>
               </div>
-              <div className="text-[10px] text-slate-400 truncate">MIT Sloan Analytics & NextGen Win Probability</div>
+              <div className="text-[10px] text-slate-400 truncate">{coHost.title || 'MIT Sloan Analytics & NextGen Win Probability'}</div>
             </div>
           </button>
 

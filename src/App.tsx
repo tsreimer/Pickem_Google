@@ -1,5 +1,6 @@
 import React from 'react';
 import { TeamProvider, useTeam } from './context/TeamContext';
+import { AudioProfileProvider } from './context/AudioProfileContext';
 import { Header } from './components/Header';
 import { Home } from './pages/Home';
 import { WarRoom } from './pages/WarRoom';
@@ -91,7 +92,9 @@ const MainContent: React.FC = () => {
 export default function App() {
   return (
     <TeamProvider>
-      <MainContent />
+      <AudioProfileProvider>
+        <MainContent />
+      </AudioProfileProvider>
     </TeamProvider>
   );
 }

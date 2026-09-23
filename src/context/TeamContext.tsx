@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Team, Game, CommentMessage, PushNotificationItem, YahooLockWindow, SyncAuditLogEntry, YahooGroupTeamRow } from '../types';
-import { INITIAL_TEAMS, WEEK_1_TEAMS, WEEK_2_TEAMS, WEEK_3_TEAMS, INITIAL_GAMES, INITIAL_COMMENTS, INITIAL_NOTIFICATIONS, YAHOO_WEEK_1_PICKS_MATRIX, YAHOO_WEEK_2_PICKS_MATRIX, YAHOO_WEEK_3_PICKS_MATRIX, YAHOO_GROUP_PICKS_MATRIX } from '../data/mockData';
+import { INITIAL_TEAMS, WEEK_1_TEAMS, WEEK_2_TEAMS, WEEK_3_TEAMS, INITIAL_GAMES, INITIAL_COMMENTS, WEEK_1_COMMENTS, WEEK_2_COMMENTS, WEEK_3_COMMENTS, INITIAL_NOTIFICATIONS, YAHOO_WEEK_1_PICKS_MATRIX, YAHOO_WEEK_2_PICKS_MATRIX, YAHOO_WEEK_3_PICKS_MATRIX, YAHOO_GROUP_PICKS_MATRIX } from '../data/mockData';
 import { audioPreGenerationService } from '../services/audioPreGenerationService';
 
 interface TeamContextType {
@@ -69,12 +69,15 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (week === 3) {
       setTeams(WEEK_3_TEAMS);
       setGroupPicksMatrix(YAHOO_WEEK_3_PICKS_MATRIX);
+      setComments(WEEK_3_COMMENTS);
     } else if (week === 2) {
       setTeams(WEEK_2_TEAMS);
       setGroupPicksMatrix(YAHOO_WEEK_2_PICKS_MATRIX);
+      setComments(WEEK_2_COMMENTS);
     } else if (week === 1) {
       setTeams(WEEK_1_TEAMS);
       setGroupPicksMatrix(YAHOO_WEEK_1_PICKS_MATRIX);
+      setComments(WEEK_1_COMMENTS);
     }
     fetch(`/api/yahoo/matrix?week=${week}`)
       .then(res => res.json())
@@ -102,6 +105,13 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
           fetch(`/api/yahoo/matrix?week=${data.currentWeek}`)
             .then(mRes => mRes.json())
             .then(mData => {
+              if (data.currentWeek === 3) {
+                setComments(WEEK_3_COMMENTS);
+              } else if (data.currentWeek === 2) {
+                setComments(WEEK_2_COMMENTS);
+              } else {
+                setComments(WEEK_1_COMMENTS);
+              }
               if (mData.success) {
                 if (Array.isArray(mData.matrix)) setGroupPicksMatrix(mData.matrix);
                 if (Array.isArray(mData.teams)) setTeams(mData.teams);
